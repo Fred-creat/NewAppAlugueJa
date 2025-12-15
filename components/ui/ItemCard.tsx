@@ -21,16 +21,22 @@ export default function ItemCard({
   onPress,
   isFeatured = false,
 }: ItemCardProps) {
+  const imageUri =
+    image && image.length > 0
+      ? image
+      : "https://via.placeholder.com/400x300?text=Sem+imagem";
+
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        isFeatured && styles.featuredCard,
-      ]}
+      style={[styles.card, isFeatured && styles.featuredCard]}
       activeOpacity={0.85}
       onPress={onPress}
     >
-      <Image source={{ uri: image }} style={styles.image} />
+      <Image
+        source={{ uri: imageUri }}
+        style={styles.image}
+        resizeMode="cover"
+      />
 
       {isFeatured && (
         <View style={styles.badge}>
@@ -39,13 +45,19 @@ export default function ItemCard({
       )}
 
       <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.location}>{location}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+
+        <Text style={styles.location} numberOfLines={1}>
+          {location}
+        </Text>
 
         <View style={styles.infoRow}>
           <Text style={styles.infoText}>
-            {beds} quartos • {baths} banheiros
+            🛏 {beds} • 🚿 {baths}
           </Text>
+
           <Text style={styles.price}>R$ {price}</Text>
         </View>
       </View>
@@ -68,6 +80,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 180,
+    backgroundColor: "#EEE",
   },
   badge: {
     position: "absolute",

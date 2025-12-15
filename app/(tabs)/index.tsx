@@ -1,12 +1,13 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import React from "react";
-
 import SearchBar from "../../components/ui/SearchBar";
 import CategorySelector from "../../components/ui/CategorySelector";
 import ItemCard from "../../components/ui/ItemCard";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function Index() {
+  const { user } = useAuth();
   const router = useRouter();
 
   const featuredProperties = [
@@ -61,36 +62,51 @@ export default function Index() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* HEADER ADAPTADO */}
       <View style={styles.headerContainer}>
         <View>
-          <Text style={styles.headerTitle}>Bem-vindo!</Text>
-          <Text style={styles.headerSubtitle}>Encontre seu imóvel ideal</Text>
+          <Text style={styles.headerTitle}>
+            {user ? `Olá, ${user.name}` : "Bem-vindo!"}
+          </Text>
+
+          <Text style={styles.headerSubtitle}>
+            {user
+              ? "Encontre oportunidades na sua região"
+              : "Encontre seu imóvel ideal"}
+          </Text>
         </View>
 
-        {/* Auth buttons */}
-        <View style={styles.authButtons}>
-          <TouchableOpacity
-            style={styles.buttonSecondary}
-            onPress={() => router.push("/auth/login")}
-            accessibilityLabel="Entrar"
-          >
-            <Text style={styles.buttonSecondaryText}>Entrar</Text>
-          </TouchableOpacity>
+        {/* Botões SOMENTE se NÃO estiver logado */}
+        {!user && (
+          <View style={styles.authButtons}>
+            <TouchableOpacity
+              style={styles.buttonSecondary}
+              onPress={() => router.push("/auth/login")}
+            >
+              <Text style={styles.buttonSecondaryText}>Entrar</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.buttonPrimary}
-            onPress={() => router.push("/auth/register")}
-            accessibilityLabel="Criar Conta"
-          >
-            <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.buttonPrimary}
+              onPress={() => router.push("/auth/register")}
+            >
+              <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      {/* CTA – Criar anúncio (somente logado) */}
+{user && (
+  <TouchableOpacity
+    style={styles.createAdButton}
+    onPress={() => router.push("/create-ad")}
+  >
+    <Text style={styles.createAdText}>+ Criar anúncio</Text>
+  </TouchableOpacity>
+)}
+
 
       {/* Search Bar */}
       <SearchBar onSearch={handleSearch} />
@@ -113,18 +129,19 @@ export default function Index() {
         />
       ))}
 
-      {/* Footer Spacing */}
       <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FAFAFA",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 25,
+    marginTop: 40,
   },
   headerContainer: {
     marginBottom: 12,
@@ -185,4 +202,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
+
+  createAdButton: {
+  backgroundColor: "#2C6EFA",
+  paddingVertical: 14,
+  borderRadius: 14,
+  alignItems: "center",
+  marginBottom: 16,
+},
+createAdText: {
+  color: "#FFF",
+  fontSize: 16,
+  fontWeight: "700",
+},
+
 });

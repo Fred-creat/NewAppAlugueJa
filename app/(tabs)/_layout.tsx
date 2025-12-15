@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import HapticTab from "@/components/ui/haptic/tab";
 import { useAuth } from "../../contexts/AuthContext";
 
-
 export default function TabsLayout() {
   const { user } = useAuth();
 
@@ -36,23 +35,10 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* BUSCA */}
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: "Buscar",
-          tabBarIcon: ({ color, size }) => (
-            <HapticTab>
-              <Ionicons name="search-outline" size={size} color={color} />
-            </HapticTab>
-          ),
-        }}
-      />
-
       {/* FAVORITOS — somente logado */}
       {user && (
         <Tabs.Screen
-          name="favorites"
+          name="favorites/index"
           options={{
             title: "Favoritos",
             tabBarIcon: ({ color, size }) => (
@@ -67,7 +53,7 @@ export default function TabsLayout() {
       {/* PERFIL — somente logado */}
       {user && (
         <Tabs.Screen
-          name="profile"
+          name="profile/index"
           options={{
             title: "Perfil",
             tabBarIcon: ({ color, size }) => (
