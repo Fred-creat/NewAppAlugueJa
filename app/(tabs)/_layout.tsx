@@ -1,35 +1,83 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import HapticTab from "@/components/ui/haptic/tab";
+import { useAuth } from "../../contexts/AuthContext";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function TabsLayout() {
+  const { user } = useAuth();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: "#FF8C00",
+        tabBarInactiveTintColor: "#999",
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: "#eee",
+        },
+      }}
+    >
+      {/* HOME */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Início",
+          tabBarIcon: ({ color, size }) => (
+            <HapticTab>
+              <Ionicons name="home-outline" size={size} color={color} />
+            </HapticTab>
+          ),
         }}
       />
+
+      {/* BUSCA */}
       <Tabs.Screen
-        name="explore"
+        name="search"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Buscar",
+          tabBarIcon: ({ color, size }) => (
+            <HapticTab>
+              <Ionicons name="search-outline" size={size} color={color} />
+            </HapticTab>
+          ),
         }}
       />
+
+      {/* FAVORITOS — somente logado */}
+      {user && (
+        <Tabs.Screen
+          name="favorites"
+          options={{
+            title: "Favoritos",
+            tabBarIcon: ({ color, size }) => (
+              <HapticTab>
+                <Ionicons name="heart-outline" size={size} color={color} />
+              </HapticTab>
+            ),
+          }}
+        />
+      )}
+
+      {/* PERFIL — somente logado */}
+      {user && (
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Perfil",
+            tabBarIcon: ({ color, size }) => (
+              <HapticTab>
+                <Ionicons name="person-outline" size={size} color={color} />
+              </HapticTab>
+            ),
+          }}
+        />
+      )}
     </Tabs>
   );
 }

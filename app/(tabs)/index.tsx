@@ -1,98 +1,188 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import React from "react";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import SearchBar from "../../components/ui/SearchBar";
+import CategorySelector from "../../components/ui/CategorySelector";
+import ItemCard from "../../components/ui/ItemCard";
 
-export default function HomeScreen() {
+export default function Index() {
+  const router = useRouter();
+
+  const featuredProperties = [
+    {
+      id: 1,
+      title: "Casa Vista Mar",
+      price: "4.500",
+      location: "Morro de São Paulo",
+      image: "https://picsum.photos/400/300?random=1",
+      beds: 3,
+      baths: 2,
+      isFeatured: true,
+    },
+    {
+      id: 2,
+      title: "Apartamento Moderno",
+      price: "2.800",
+      location: "Centro da Cidade",
+      image: "https://picsum.photos/400/300?random=2",
+      beds: 2,
+      baths: 1,
+      isFeatured: false,
+    },
+    {
+      id: 3,
+      title: "Cobertura Luxo",
+      price: "6.200",
+      location: "Praia Grande",
+      image: "https://picsum.photos/400/300?random=3",
+      beds: 4,
+      baths: 3,
+      isFeatured: true,
+    },
+    {
+      id: 4,
+      title: "Studio Aconchegante",
+      price: "1.500",
+      location: "Vila Mariana",
+      image: "https://picsum.photos/400/300?random=4",
+      beds: 1,
+      baths: 1,
+      isFeatured: false,
+    },
+  ];
+
+  const sortedProperties = [...featuredProperties].sort(
+    (a, b) => Number(b.isFeatured) - Number(a.isFeatured)
+  );
+
+  const handleSearch = (query: string) => {
+    console.log("Buscando:", query);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View>
+          <Text style={styles.headerTitle}>Bem-vindo!</Text>
+          <Text style={styles.headerSubtitle}>Encontre seu imóvel ideal</Text>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Auth buttons */}
+        <View style={styles.authButtons}>
+          <TouchableOpacity
+            style={styles.buttonSecondary}
+            onPress={() => router.push("/auth/login")}
+            accessibilityLabel="Entrar"
+          >
+            <Text style={styles.buttonSecondaryText}>Entrar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.buttonPrimary}
+            onPress={() => router.push("/auth/register")}
+            accessibilityLabel="Criar Conta"
+          >
+            <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Search Bar */}
+      <SearchBar onSearch={handleSearch} />
+
+      {/* Category Selector */}
+      <CategorySelector />
+
+      {/* Featured Section */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>✨ Destaques</Text>
+      </View>
+
+      {/* Property Cards */}
+      {sortedProperties.map((property) => (
+        <ItemCard
+          key={property.id}
+          {...property}
+          onPress={() => router.push(`/item/${property.id}`)}
+          isFeatured={property.isFeatured}
+        />
+      ))}
+
+      {/* Footer Spacing */}
+      <View style={{ height: 20 }} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  headerContainer: {
+    marginBottom: 12,
+    paddingTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#333",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "500",
+  },
+  authButtons: {
+    flexDirection: "row",
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  buttonPrimary: {
+    backgroundColor: "#2C6EFA",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  buttonPrimaryText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  buttonSecondary: {
+    borderWidth: 1,
+    borderColor: "#2C6EFA",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonSecondaryText: {
+    color: "#2C6EFA",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  sectionContainer: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#333",
   },
 });
