@@ -1,61 +1,21 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import React from "react";
-import SearchBar from "../../components/ui/SearchBar";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CategorySelector from "../../components/ui/CategorySelector";
 import ItemCard from "../../components/ui/ItemCard";
+import SearchBar from "../../components/ui/SearchBar";
+import { useAds } from "../../contexts/AdsContext";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Index() {
   const { user } = useAuth();
+  const { ads } = useAds();
   const router = useRouter();
 
-  const featuredProperties = [
-    {
-      id: 1,
-      title: "Casa Vista Mar",
-      price: "4.500",
-      location: "Morro de São Paulo",
-      image: "https://picsum.photos/400/300?random=1",
-      beds: 3,
-      baths: 2,
-      isFeatured: true,
-    },
-    {
-      id: 2,
-      title: "Apartamento Moderno",
-      price: "2.800",
-      location: "Centro da Cidade",
-      image: "https://picsum.photos/400/300?random=2",
-      beds: 2,
-      baths: 1,
-      isFeatured: false,
-    },
-    {
-      id: 3,
-      title: "Cobertura Luxo",
-      price: "6.200",
-      location: "Praia Grande",
-      image: "https://picsum.photos/400/300?random=3",
-      beds: 4,
-      baths: 3,
-      isFeatured: true,
-    },
-    {
-      id: 4,
-      title: "Studio Aconchegante",
-      price: "1.500",
-      location: "Vila Mariana",
-      image: "https://picsum.photos/400/300?random=4",
-      beds: 1,
-      baths: 1,
-      isFeatured: false,
-    },
-  ];
-
-  const sortedProperties = [...featuredProperties].sort(
-    (a, b) => Number(b.isFeatured) - Number(a.isFeatured)
-  );
+  // 👉 SOMENTE ANÚNCIOS APROVADOS + DESTAQUES NO TOPO
+  const approvedAds = ads
+    .filter((ad) => ad.status === "APPROVED")
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
 
   const handleSearch = (query: string) => {
     console.log("Buscando:", query);
@@ -63,7 +23,7 @@ export default function Index() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* HEADER ADAPTADO */}
+      {/* HEADER */}
       <View style={styles.headerContainer}>
         <View>
           <Text style={styles.headerTitle}>
@@ -77,7 +37,6 @@ export default function Index() {
           </Text>
         </View>
 
-        {/* Botões SOMENTE se NÃO estiver logado */}
         {!user && (
           <View style={styles.authButtons}>
             <TouchableOpacity
@@ -97,43 +56,54 @@ export default function Index() {
         )}
       </View>
 
-      {/* CTA – Criar anúncio (somente logado) */}
-{user && (
-  <TouchableOpacity
-    style={styles.createAdButton}
-    onPress={() => router.push("/create-ad")}
-  >
-    <Text style={styles.createAdText}>+ Criar anúncio</Text>
-  </TouchableOpacity>
-)}
+      {/* CTA – Criar anúncio */}
+      {user && (
+        <TouchableOpacity
+          style={styles.createAdButton}
+          onPress={() => router.push("/create-ad")}
+        >
+          <Text style={styles.createAdText}>+ Criar anúncio</Text>
+        </TouchableOpacity>
+      )}
 
-
-      {/* Search Bar */}
+      {/* SEARCH */}
       <SearchBar onSearch={handleSearch} />
 
-      {/* Category Selector */}
+      {/* CATEGORIAS */}
       <CategorySelector />
 
-      {/* Featured Section */}
+      {/* DESTAQUES */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>✨ Destaques</Text>
       </View>
 
-      {/* Property Cards */}
-      {sortedProperties.map((property) => (
-        <ItemCard
-          key={property.id}
-          {...property}
-          onPress={() => router.push(`/item/${property.id}`)}
-          isFeatured={property.isFeatured}
-        />
-      ))}
+      {/* LISTAGEM */}
+      {approvedAds.length === 0 ? (
+        <Text style={styles.emptyText}>
+          Nenhum anúncio disponível no momento.
+        </Text>
+      ) : (
+        approvedAds.map((ad) => (
+          <ItemCard
+            key={ad.id}
+            title={ad.title}
+            price={ad.price}
+            location={ad.location}
+            image={ad.images[0]}
+            beds={ad.beds}
+            baths={ad.baths}
+            isFeatured={ad.isFeatured}
+            onPress={() => router.push(`/item/${ad.id}`)}
+          />
+        ))
+      )}
 
       <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
 
+/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
   container: {
@@ -202,18 +172,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
-
+  emptyText: {
+    textAlign: "center",
+    color: "#777",
+    marginTop: 20,
+    fontSize: 14,
+  },
   createAdButton: {
-  backgroundColor: "#2C6EFA",
-  paddingVertical: 14,
-  borderRadius: 14,
-  alignItems: "center",
-  marginBottom: 16,
-},
-createAdText: {
-  color: "#FFF",
-  fontSize: 16,
-  fontWeight: "700",
-},
-
+    backgroundColor: "#2C6EFA",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  createAdText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

@@ -1,36 +1,37 @@
-
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../../contexts/AuthContext";
 
 export default function Profile() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
+
+  if (!user) return null;
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Ionicons name="person-circle-outline" size={90} color="#2C6EFA" />
-        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.role}>
-          {user?.role === "advertiser" ? "Anunciante" : "Usuário"}
+          {isAdmin ? "Administrador" : "Usuário"}
         </Text>
       </View>
 
       {/* Actions */}
       <View style={styles.actions}>
-        {user?.role === "advertiser" && (
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push("/my-ads")}
-          >
-            <Ionicons name="home-outline" size={22} color="#333" />
-            <Text style={styles.actionText}>Meus anúncios</Text>
-          </TouchableOpacity>
-        )}
+        {/* Meus anúncios (qualquer usuário logado) */}
+        <TouchableOpacity
+          style={styles.actionItem}
+          onPress={() => router.push("/my-ads")}
+        >
+          <Ionicons name="home-outline" size={22} color="#333" />
+          <Text style={styles.actionText}>Meus anúncios</Text>
+        </TouchableOpacity>
 
+        {/* Favoritos */}
         <TouchableOpacity
           style={styles.actionItem}
           onPress={() => router.push("/favorites")}
@@ -39,19 +40,43 @@ export default function Profile() {
           <Text style={styles.actionText}>Favoritos</Text>
         </TouchableOpacity>
 
+        {/* 🔐 Painel ADMIN */}
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push("/admin/approve")}
+          >
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={22}
+              color="#2C6EFA"
+            />
+            <Text style={[styles.actionText, { color: "#2C6EFA" }]}>
+              Painel de Aprovação
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Logout */}
         <TouchableOpacity
           style={[styles.actionItem, styles.logout]}
-          onPress={signOut}
+          onPress={() => {
+            signOut();
+            router.replace("/");
+          }}
         >
           <Ionicons name="log-out-outline" size={22} color="#E53935" />
           <Text style={[styles.actionText, { color: "#E53935" }]}>
             Sair
           </Text>
         </TouchableOpacity>
+
       </View>
     </View>
   );
 }
+
+/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
   container: {

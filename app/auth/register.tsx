@@ -1,6 +1,6 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Register() {
@@ -14,8 +14,8 @@ export default function Register() {
   const handleRegister = () => {
     signIn({
       id: "2",
-      name,
-      role: "advertiser",
+      name: name,
+      role: "USER",
     });
 
     router.replace("/(tabs)");

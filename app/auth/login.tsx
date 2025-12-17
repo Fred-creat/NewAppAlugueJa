@@ -1,6 +1,6 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Login() {
@@ -13,8 +13,8 @@ export default function Login() {
   const handleLogin = () => {
     signIn({
       id: "1",
-      name: "Anunciante Teste",
-      role: "advertiser",
+      name: "Admin",
+      role: "ADMIN",
     });
 
     router.replace("/(tabs)");
