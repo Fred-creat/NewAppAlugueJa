@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
-import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useMemo } from "react";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import CategorySelector from "../../components/ui/CategorySelector";
 import ItemCard from "../../components/ui/ItemCard";
 import SearchBar from "../../components/ui/SearchBar";
@@ -12,94 +18,101 @@ export default function Index() {
   const { ads } = useAds();
   const router = useRouter();
 
-  // 👉 SOMENTE ANÚNCIOS APROVADOS + DESTAQUES NO TOPO
-  const approvedAds = ads
-    .filter((ad) => ad.status === "APPROVED")
-    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
+  // 👉 SOMENTE ANÚNCIOS APROVADOS + DESTAQUES NO TOPO (MEMO)
+  const approvedAds = useMemo(() => {
+    return ads
+      .filter((ad) => ad.status === "APPROVED")
+      .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
+  }, [ads]);
 
   const handleSearch = (query: string) => {
     console.log("Buscando:", query);
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* HEADER */}
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={styles.headerTitle}>
-            {user ? `Olá, ${user.name}` : "Bem-vindo!"}
-          </Text>
+    <FlatList
+      data={approvedAds}
+      keyExtractor={(item) => item.id}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.container}
+      ListHeaderComponent={
+        <>
+          {/* HEADER */}
+          <View style={styles.headerContainer}>
+            <View>
+              <Text style={styles.headerTitle}>
+                {user ? `Olá, ${user.name}` : "Bem-vindo!"}
+              </Text>
 
-          <Text style={styles.headerSubtitle}>
-            {user
-              ? "Encontre oportunidades na sua região"
-              : "Encontre seu imóvel ideal"}
-          </Text>
-        </View>
+              <Text style={styles.headerSubtitle}>
+                {user
+                  ? "Encontre oportunidades na sua região"
+                  : "Encontre seu imóvel ideal"}
+              </Text>
+            </View>
 
-        {!user && (
-          <View style={styles.authButtons}>
-            <TouchableOpacity
-              style={styles.buttonSecondary}
-              onPress={() => router.push("/auth/login")}
-            >
-              <Text style={styles.buttonSecondaryText}>Entrar</Text>
-            </TouchableOpacity>
+            {!user && (
+              <View style={styles.authButtons}>
+                <TouchableOpacity
+                  style={styles.buttonSecondary}
+                  onPress={() => router.push("/auth/login")}
+                >
+                  <Text style={styles.buttonSecondaryText}>Entrar</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.buttonPrimary}
-              onPress={() => router.push("/auth/register")}
-            >
-              <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.buttonPrimary}
+                  onPress={() => router.push("/auth/register")}
+                >
+                  <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        )}
-      </View>
 
-      {/* CTA – Criar anúncio */}
-      {user && (
-        <TouchableOpacity
-          style={styles.createAdButton}
-          onPress={() => router.push("/create-ad")}
-        >
-          <Text style={styles.createAdText}>+ Criar anúncio</Text>
-        </TouchableOpacity>
+          {/* CTA – Criar anúncio */}
+          {user && (
+            <TouchableOpacity
+              style={styles.createAdButton}
+              onPress={() => router.push("/create-ad")}
+            >
+              <Text style={styles.createAdText}>+ Criar anúncio</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* SEARCH */}
+          <SearchBar onSearch={handleSearch} />
+
+          {/* CATEGORIAS */}
+          <CategorySelector />
+
+          {/* DESTAQUES */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>✨ Destaques</Text>
+          </View>
+
+          {/* EMPTY STATE */}
+          {approvedAds.length === 0 && (
+            <Text style={styles.emptyText}>
+              Nenhum anúncio disponível no momento.
+            </Text>
+          )}
+        </>
+      }
+      renderItem={({ item }) => (
+        <ItemCard
+          title={item.title}
+          price={item.price}
+          location={item.location}
+          image={item.images[0]}
+          beds={item.beds}
+          baths={item.baths}
+          isFeatured={item.isFeatured}
+          onPress={() => router.push(`/item/${item.id}`)}
+        />
       )}
-
-      {/* SEARCH */}
-      <SearchBar onSearch={handleSearch} />
-
-      {/* CATEGORIAS */}
-      <CategorySelector />
-
-      {/* DESTAQUES */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>✨ Destaques</Text>
-      </View>
-
-      {/* LISTAGEM */}
-      {approvedAds.length === 0 ? (
-        <Text style={styles.emptyText}>
-          Nenhum anúncio disponível no momento.
-        </Text>
-      ) : (
-        approvedAds.map((ad) => (
-          <ItemCard
-            key={ad.id}
-            title={ad.title}
-            price={ad.price}
-            location={ad.location}
-            image={ad.images[0]}
-            beds={ad.beds}
-            baths={ad.baths}
-            isFeatured={ad.isFeatured}
-            onPress={() => router.push(`/item/${ad.id}`)}
-          />
-        ))
-      )}
-
-      <View style={{ height: 20 }} />
-    </ScrollView>
+      ListFooterComponent={<View style={{ height: 20 }} />}
+    />
   );
 }
 
@@ -107,11 +120,10 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#FAFAFA",
     paddingHorizontal: 16,
     paddingTop: 25,
-    marginTop: 40,
+    paddingBottom: 20,
   },
   headerContainer: {
     marginBottom: 12,

@@ -1,7 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
 
-type User = {
+/* ================== TYPES ================== */
+
+export type User = {
   id: string;
   name: string;
   role: "USER" | "ADMIN";
@@ -10,53 +12,80 @@ type User = {
 type AuthContextData = {
   user: User | null;
   isAdmin: boolean;
-  signIn: (user: User) => void;
-  signOut: () => void;
   loading: boolean;
+  signIn: (user: User) => Promise<void>;
+  signOut: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+/* ================== CONTEXT ================== */
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+const STORAGE_KEY = "@alugueja:user";
+
+const AuthContext = createContext<AuthContextData>(
+  {} as AuthContextData
+);
+
+/* ================== PROVIDER ================== */
+
+export function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔄 Carregar usuário salvo
+  const isAdmin = user?.role === "ADMIN";
+
+  /* 🔄 Carregar usuário salvo */
   useEffect(() => {
-    async function loadUser() {
-      const storedUser = await AsyncStorage.getItem("@alugueja:user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-      setLoading(false);
-    }
     loadUser();
   }, []);
 
-  const signIn = async (userData: User) => {
-    setUser(userData);
-    await AsyncStorage.setItem("@alugueja:user", JSON.stringify(userData));
+  const loadUser = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.log("Erro ao carregar usuário:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  /* 🔐 Login */
+  const signIn = async (userData: User) => {
+    setUser(userData);
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(userData)
+    );
+  };
+
+  /* 🚪 Logout */
   const signOut = async () => {
     setUser(null);
-    await AsyncStorage.removeItem("@alugueja:user");
+    await AsyncStorage.removeItem(STORAGE_KEY);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAdmin: user?.role === "ADMIN",
+        isAdmin,
+        loading,
         signIn,
         signOut,
-        loading,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
+
+/* ================== HOOK ================== */
 
 export function useAuth() {
   return useContext(AuthContext);

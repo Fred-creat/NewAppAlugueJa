@@ -1,22 +1,14 @@
-import { useRouter } from "expo-router";
-import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ItemCard from "../../components/ui/ItemCard";
 import { useAds } from "../../contexts/AdsContext";
 import { useAuth } from "../../contexts/AuthContext";
 
-export default function ApproveAds() {
-  const { ads, approveAd } = useAds();
-  const { user, isAdmin } = useAuth();
-  const router = useRouter();
+export default function AdminApprove() {
+  const { ads, approveAd, promoteAd } = useAds();
+  const { isAdmin } = useAuth();
 
-  // 🔒 SOMENTE ADMIN
-  if (!user || !isAdmin) {
+  if (!isAdmin) {
     return (
       <View style={styles.center}>
         <Text>Acesso restrito</Text>
@@ -24,56 +16,132 @@ export default function ApproveAds() {
     );
   }
 
-  // 👉 SOMENTE ANÚNCIOS PENDENTES
   const pendingAds = ads.filter((ad) => ad.status === "PENDING");
+  const paymentPendingAds = ads.filter(
+    (ad) => ad.status === "PAYMENT_PENDING"
+  );
 
-  if (pendingAds.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text>Nenhum anúncio pendente</Text>
-      </View>
+  const confirmApprove = (id: string) => {
+    Alert.alert(
+      "Aprovar anúncio",
+      "Deseja aprovar este anúncio e publicá-lo?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Aprovar",
+          style: "default",
+          onPress: () => approveAd(id),
+        },
+      ]
     );
-  }
+  };
+
+  const confirmPayment = (id: string) => {
+    Alert.alert(
+      "Confirmar pagamento",
+      "Deseja confirmar o pagamento e destacar este anúncio?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Confirmar",
+          style: "default",
+          onPress: () => promoteAd(id),
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Aprovação de anúncios</Text>
+      <Text style={styles.title}>Painel Administrativo</Text>
 
-      <FlatList
-        data={pendingAds}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <ItemCard
-              title={item.title}
-              price={item.price}
-              location={item.location}
-              image={item.images[0]}
-              beds={item.beds}
-              baths={item.baths}
-            />
+      {/* ================== ANÚNCIOS PENDENTES ================== */}
+      <View style={styles.sectionBox}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="time-outline" size={20} color="#F39C12" />
+          <Text style={styles.sectionTitle}>Anúncios pendentes</Text>
+        </View>
 
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.approveButton}
-                onPress={() => approveAd(item.id)}
-              >
-                <Text style={styles.approveText}>Aprovar</Text>
-              </TouchableOpacity>
+        {pendingAds.length === 0 ? (
+          <Text style={styles.empty}>
+            Nenhum anúncio aguardando aprovação.
+          </Text>
+        ) : (
+          <FlatList
+            data={pendingAds}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <ItemCard
+                  title={item.title}
+                  price={item.price}
+                  location={item.location}
+                  image={item.images[0]}
+                  beds={item.beds}
+                  baths={item.baths}
+                />
 
-              <TouchableOpacity
-                style={styles.rejectButton}
-                onPress={() =>
-                  alert("Rejeição será tratada no backend futuramente")
-                }
-              >
-                <Text style={styles.rejectText}>Rejeitar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                <TouchableOpacity
+                  style={styles.approveButton}
+                  onPress={() => confirmApprove(item.id)}
+                >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={18}
+                    color="#FFF"
+                  />
+                  <Text style={styles.buttonText}>Aprovar anúncio</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
         )}
-      />
+      </View>
+
+      {/* ================== PAGAMENTOS ================== */}
+      <View style={styles.sectionBox}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="card-outline" size={20} color="#8E44AD" />
+          <Text style={styles.sectionTitle}>Pagamentos em análise</Text>
+        </View>
+
+        {paymentPendingAds.length === 0 ? (
+          <Text style={styles.empty}>
+            Nenhum pagamento aguardando confirmação.
+          </Text>
+        ) : (
+          <FlatList
+            data={paymentPendingAds}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <ItemCard
+                  title={item.title}
+                  price={item.price}
+                  location={item.location}
+                  image={item.images[0]}
+                  beds={item.beds}
+                  baths={item.baths}
+                />
+
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={() => confirmPayment(item.id)}
+                >
+                  <Ionicons
+                    name="star-outline"
+                    size={18}
+                    color="#FFF"
+                  />
+                  <Text style={styles.buttonText}>
+                    Confirmar pagamento
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -88,37 +156,54 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 12,
   },
-  card: {
-    marginBottom: 10,
+  sectionBox: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 20,
   },
-  actions: {
+  sectionHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: -6,
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 6,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  card: {
     marginBottom: 16,
   },
   approveButton: {
+    flexDirection: "row",
+    gap: 6,
     backgroundColor: "#2ECC71",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  approveText: {
+  confirmButton: {
+    flexDirection: "row",
+    gap: 6,
+    backgroundColor: "#8E44AD",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonText: {
     color: "#FFF",
     fontWeight: "700",
   },
-  rejectButton: {
-    backgroundColor: "#E74C3C",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-  },
-  rejectText: {
-    color: "#FFF",
-    fontWeight: "700",
+  empty: {
+    fontSize: 14,
+    color: "#777",
+    marginVertical: 8,
   },
   center: {
     flex: 1,

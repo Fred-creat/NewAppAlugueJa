@@ -7,8 +7,7 @@ import { AuthProvider, useAuth } from "../contexts/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
-/* 🔒 Gate de carregamento */
-function AppGate() {
+function AppContent() {
   const { loading } = useAuth();
 
   useEffect(() => {
@@ -22,9 +21,8 @@ function AppGate() {
       <View
         style={{
           flex: 1,
-          justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#FFF",
+          justifyContent: "center",
         }}
       >
         <ActivityIndicator size="large" />
@@ -39,7 +37,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AdsProvider>
-        <AppGate />
+        <AppContent />
       </AdsProvider>
     </AuthProvider>
   );

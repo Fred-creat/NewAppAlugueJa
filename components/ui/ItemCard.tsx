@@ -1,4 +1,5 @@
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { memo } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 type ItemCardProps = {
   title: string;
@@ -11,7 +12,7 @@ type ItemCardProps = {
   isFeatured?: boolean;
 };
 
-export default function ItemCard({
+function ItemCard({
   title,
   price,
   location,
@@ -27,16 +28,16 @@ export default function ItemCard({
       : "https://via.placeholder.com/400x300?text=Sem+imagem";
 
   return (
-    <TouchableOpacity
-      style={[styles.card, isFeatured && styles.featuredCard]}
-      activeOpacity={0.85}
+    <Pressable
       onPress={onPress}
+      android_ripple={{ color: "#eee" }}
+      style={({ pressed }) => [
+        styles.card,
+        isFeatured && styles.featuredCard,
+        pressed && { opacity: 0.96 },
+      ]}
     >
-      <Image
-        source={{ uri: imageUri }}
-        style={styles.image}
-        resizeMode="cover"
-      />
+      <Image source={{ uri: imageUri }} style={styles.image} />
 
       {isFeatured && (
         <View style={styles.badge}>
@@ -61,9 +62,13 @@ export default function ItemCard({
           <Text style={styles.price}>R$ {price}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
+
+export default memo(ItemCard);
+
+/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
   card: {

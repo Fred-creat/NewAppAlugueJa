@@ -1,12 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import ItemCard from "../components/ui/ItemCard";
 import { useAds } from "../contexts/AdsContext";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function MyAds() {
-  const { ads, promoteAd } = useAds();
+  const { ads } = useAds();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -18,7 +24,6 @@ export default function MyAds() {
     );
   }
 
-  // 👉 SOMENTE ANÚNCIOS DO USUÁRIO
   const myAds = ads.filter((ad) => ad.userId === user.id);
 
   if (myAds.length === 0) {
@@ -33,6 +38,38 @@ export default function MyAds() {
     );
   }
 
+  const renderStatus = (item: any) => {
+    if (item.isFeatured) {
+      return (
+        <View style={[styles.badge, styles.featured]}>
+          <Text style={styles.badgeText}>⭐ Destaque ativo</Text>
+        </View>
+      );
+    }
+
+    if (item.status === "PAYMENT_PENDING") {
+      return (
+        <View style={[styles.badge, styles.payment]}>
+          <Text style={styles.badgeText}>💳 Pagamento em análise</Text>
+        </View>
+      );
+    }
+
+    if (item.status === "PENDING") {
+      return (
+        <View style={[styles.badge, styles.pending]}>
+          <Text style={styles.badgeText}>⏳ Aguardando aprovação</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.badge, styles.approved]}>
+        <Text style={styles.badgeText}>✅ Publicado</Text>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Meus anúncios</Text>
@@ -42,7 +79,7 @@ export default function MyAds() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View>
+          <View style={styles.card}>
             <ItemCard
               title={item.title}
               price={item.price}
@@ -56,24 +93,32 @@ export default function MyAds() {
 
             {/* STATUS */}
             <View style={styles.statusRow}>
-              {item.status === "PENDING" && (
-                <Text style={styles.pending}>🕒 Em análise</Text>
-              )}
-
-              {item.status === "APPROVED" && (
-                <Text style={styles.approved}>✅ Publicado</Text>
-              )}
+              {renderStatus(item)}
             </View>
 
-            {/* PROMOVER */}
+            {/* CTA PROMOVER */}
             {item.status === "APPROVED" && !item.isFeatured && (
-              <TouchableOpacity
-                style={styles.promoteButton}
-                onPress={() => promoteAd(item.id)}
-              >
-                <Ionicons name="star-outline" size={18} color="#2C6EFA" />
-                <Text style={styles.promoteText}>Promover anúncio</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.promoteButton}
+                  onPress={() =>
+                    router.push(`/promote-ad/${item.id}`)
+                  }
+                >
+                  <Ionicons
+                    name="star-outline"
+                    size={18}
+                    color="#2C6EFA"
+                  />
+                  <Text style={styles.promoteText}>
+                    Destacar anúncio
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.helperText}>
+                  Destaque seu anúncio e apareça no topo da lista
+                </Text>
+              </>
             )}
           </View>
         )}
@@ -95,6 +140,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 12,
   },
+  card: {
+    marginBottom: 20,
+  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -112,33 +160,55 @@ const styles = StyleSheet.create({
     color: "#777",
     textAlign: "center",
   },
+
+  /* STATUS */
   statusRow: {
     marginTop: -6,
     marginBottom: 10,
     paddingHorizontal: 6,
   },
+  badge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFF",
+  },
   pending: {
-    fontSize: 13,
-    color: "#F39C12",
-    fontWeight: "600",
+    backgroundColor: "#F39C12",
   },
   approved: {
-    fontSize: 13,
-    color: "#2ECC71",
-    fontWeight: "600",
+    backgroundColor: "#2ECC71",
   },
+  payment: {
+    backgroundColor: "#2980B9",
+  },
+  featured: {
+    backgroundColor: "#8E44AD",
+  },
+
+  /* PROMOVER */
   promoteButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#EAF0FF",
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
-    marginBottom: 16,
     gap: 6,
   },
   promoteText: {
     color: "#2C6EFA",
     fontWeight: "700",
+  },
+  helperText: {
+    fontSize: 12,
+    color: "#777",
+    textAlign: "center",
+    marginTop: 6,
   },
 });

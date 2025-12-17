@@ -1,6 +1,17 @@
-import { createContext, useContext, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-export type AdStatus = "PENDING" | "APPROVED";
+/* ================== TYPES ================== */
+
+export type AdStatus =
+  | "PENDING"           // Criado, aguardando aprovação
+  | "APPROVED"          // Aprovado para aparecer
+  | "PAYMENT_PENDING";  // Pagamento em análise
 
 export type Ad = {
   id: string;
@@ -15,7 +26,7 @@ export type Ad = {
   baths: number;
   images: string[];
 
-   status: "PENDING" | "APPROVED";
+  status: AdStatus;
   isFeatured: boolean;
 
   createdAt: number;
@@ -30,12 +41,17 @@ type AdsContextData = {
   ads: Ad[];
   addAd: (ad: NewAd) => void;
   approveAd: (adId: string) => void;
+  requestPromotion: (adId: string) => void;
   promoteAd: (adId: string) => void;
 };
+
+/* ================== CONTEXT ================== */
 
 const AdsContext = createContext<AdsContextData>(
   {} as AdsContextData
 );
+
+/* ================== PROVIDER ================== */
 
 export function AdsProvider({
   children,
@@ -43,8 +59,29 @@ export function AdsProvider({
   children: React.ReactNode;
 }) {
   const [ads, setAds] = useState<Ad[]>([]);
+  const STORAGE_KEY = "@alugueja:ads";
 
-  // Criar anúncio (sempre pendente)
+  /* 🔄 Carregar anúncios salvos */
+  useEffect(() => {
+    async function loadAds() {
+      try {
+        const storedAds = await AsyncStorage.getItem(STORAGE_KEY);
+        if (storedAds) {
+          setAds(JSON.parse(storedAds));
+        }
+      } catch (error) {
+        console.log("Erro ao carregar anúncios", error);
+      }
+    }
+    loadAds();
+  }, []);
+
+  /* 💾 Persistir anúncios automaticamente */
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ads));
+  }, [ads]);
+
+  /* Criar anúncio (sempre pendente) */
   const addAd = (adData: NewAd) => {
     const newAd: Ad = {
       id: Date.now().toString(),
@@ -67,7 +104,7 @@ export function AdsProvider({
     setAds((prev) => [newAd, ...prev]);
   };
 
-  // Aprovação (simulando admin por enquanto)
+  /* Aprovação inicial do anúncio (admin) */
   const approveAd = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
@@ -78,12 +115,27 @@ export function AdsProvider({
     );
   };
 
-  // Promover anúncio (somente aprovado)
-  const promoteAd = (adId: string) => {
+  /* Usuário solicita destaque (pagamento feito) */
+  const requestPromotion = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
         ad.id === adId && ad.status === "APPROVED"
-          ? { ...ad, isFeatured: true }
+          ? { ...ad, status: "PAYMENT_PENDING" }
+          : ad
+      )
+    );
+  };
+
+  /* Admin confirma pagamento → vira destaque */
+  const promoteAd = (adId: string) => {
+    setAds((prev) =>
+      prev.map((ad) =>
+        ad.id === adId && ad.status === "PAYMENT_PENDING"
+          ? {
+              ...ad,
+              isFeatured: true,
+              status: "APPROVED",
+            }
           : ad
       )
     );
@@ -91,12 +143,20 @@ export function AdsProvider({
 
   return (
     <AdsContext.Provider
-      value={{ ads, addAd, approveAd, promoteAd }}
+      value={{
+        ads,
+        addAd,
+        approveAd,
+        requestPromotion,
+        promoteAd,
+      }}
     >
       {children}
     </AdsContext.Provider>
   );
 }
+
+/* ================== HOOK ================== */
 
 export function useAds() {
   return useContext(AdsContext);
