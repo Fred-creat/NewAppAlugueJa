@@ -1,25 +1,17 @@
+import { useLocalSearchParams } from "expo-router";
 import {
   Image,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-
-import { useLocalSearchParams } from "expo-router";
 import { useAds } from "../../contexts/AdsContext";
+import { openWhatsApp } from "../../utils/openWhatsApp";
 
 /* ================== WHATSAPP ================== */
 
-const openWhatsApp = (phone: string, title: string) => {
-  const message = `Olá! Tenho interesse no imóvel "${title}" que vi no AlugueJá.`;
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  Linking.openURL(url);
-};
-
-/* ================== SCREEN ================== */
 
 export default function ItemDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,19 +53,17 @@ export default function ItemDetails() {
       </Text>
 
       {/* CTA CONTATO */}
-      <TouchableOpacity
-        style={styles.contactButton}
-        onPress={() =>
-          openWhatsApp(
-            "55999999999", // 🔜 backend futuramente
-            ad.title
-          )
-        }
-      >
-        <Text style={styles.contactButtonText}>
-          Falar com anunciante
-        </Text>
-      </TouchableOpacity>
+     <TouchableOpacity
+  style={styles.contactButton}
+  onPress={() =>
+    openWhatsApp(ad.contactPhone, ad.title)
+  }
+>
+  <Text style={styles.contactButtonText}>
+    Falar com anunciante
+  </Text>
+</TouchableOpacity>
+
     </ScrollView>
   );
 }

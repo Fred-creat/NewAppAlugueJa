@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import CategorySelector from "../../components/ui/CategorySelector";
 import ItemCard from "../../components/ui/ItemCard";
 import SearchBar from "../../components/ui/SearchBar";
@@ -18,20 +19,32 @@ export default function Index() {
   const { ads } = useAds();
   const router = useRouter();
 
-  // 👉 SOMENTE ANÚNCIOS APROVADOS + DESTAQUES NO TOPO (MEMO)
-  const approvedAds = useMemo(() => {
+  // ✅ PADRÃO CORRETO
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
+
+  /* ✅ FILTRO FINAL (SEM BUG) */
+  const filteredAds = useMemo(() => {
     return ads
       .filter((ad) => ad.status === "APPROVED")
+      .filter((ad) => {
+        if (selectedCategory === "ALL") return true;
+        return ad.category === selectedCategory;
+      })
+      .filter((ad) => {
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+          ad.title.toLowerCase().includes(q) ||
+          ad.location.toLowerCase().includes(q)
+        );
+      })
       .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
-  }, [ads]);
-
-  const handleSearch = (query: string) => {
-    console.log("Buscando:", query);
-  };
+  }, [ads, selectedCategory, search]);
 
   return (
     <FlatList
-      data={approvedAds}
+      data={filteredAds}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.container}
@@ -43,11 +56,8 @@ export default function Index() {
               <Text style={styles.headerTitle}>
                 {user ? `Olá, ${user.name}` : "Bem-vindo!"}
               </Text>
-
               <Text style={styles.headerSubtitle}>
-                {user
-                  ? "Encontre oportunidades na sua região"
-                  : "Encontre seu imóvel ideal"}
+                Encontre seu imóvel ideal
               </Text>
             </View>
 
@@ -70,7 +80,7 @@ export default function Index() {
             )}
           </View>
 
-          {/* CTA – Criar anúncio */}
+          {/* CTA */}
           {user && (
             <TouchableOpacity
               style={styles.createAdButton}
@@ -81,38 +91,38 @@ export default function Index() {
           )}
 
           {/* SEARCH */}
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar onSearch={setSearch} />
 
-          {/* CATEGORIAS */}
-          <CategorySelector />
+          {/* ✅ CATEGORIAS */}
+          <CategorySelector
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
 
-          {/* DESTAQUES */}
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>✨ Destaques</Text>
+            <Text style={styles.sectionTitle}>✨ Anúncios</Text>
           </View>
 
-          {/* EMPTY STATE */}
-          {approvedAds.length === 0 && (
+          {filteredAds.length === 0 && (
             <Text style={styles.emptyText}>
-              Nenhum anúncio disponível no momento.
+              Nenhum anúncio encontrado.
             </Text>
           )}
         </>
       }
-    renderItem={({ item }) => (
-  <ItemCard
-    id={item.id}
-    title={item.title}
-    price={item.price}
-    location={item.location}
-    image={item.images[0]}
-    beds={item.beds}
-    baths={item.baths}
-    isFeatured={item.isFeatured}
-    onPress={() => router.push(`/item/${item.id}`)}
-  />
-)}
-
+      renderItem={({ item }) => (
+        <ItemCard
+          id={item.id}
+          title={item.title}
+          price={item.price}
+          location={item.location}
+          image={item.images[0]}
+          beds={item.beds}
+          baths={item.baths}
+          isFeatured={item.isFeatured}
+          onPress={() => router.push(`/item/${item.id}`)}
+        />
+      )}
       ListFooterComponent={<View style={{ height: 20 }} />}
     />
   );

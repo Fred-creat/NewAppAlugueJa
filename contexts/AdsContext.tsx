@@ -9,9 +9,19 @@ import {
 /* ================== TYPES ================== */
 
 export type AdStatus =
-  | "PENDING"           // Criado, aguardando aprovação
-  | "APPROVED"          // Aprovado para aparecer
-  | "PAYMENT_PENDING";  // Pagamento em análise
+  | "PENDING"
+  | "APPROVED"
+  | "PAYMENT_PENDING";
+
+/* ✅ CATEGORIAS SUPORTADAS */
+export type Category =
+  | "CASAS"
+  | "APARTAMENTO"
+  | "POUSADA"
+  | "KITNET"
+  | "TERRENO"
+  | "LANCHA"
+  | "FERRAMENTA";
 
 export type Ad = {
   id: string;
@@ -21,10 +31,12 @@ export type Ad = {
   description: string;
   price: string;
   location: string;
+  category: Category;
 
   beds: number;
   baths: number;
   images: string[];
+  contactPhone: string;
 
   status: AdStatus;
   isFeatured: boolean;
@@ -32,16 +44,19 @@ export type Ad = {
   createdAt: number;
 };
 
-/* 🔐 Tipagem segura para criação */
+/* 🔐 Payload de criação */
 type NewAd = {
   userId: string;
   title: string;
   description: string;
   price: string;
   location: string;
+  category: Category;
+
   beds: number;
   baths: number;
   images: string[];
+  contactPhone: string;
 };
 
 type AdsContextData = {
@@ -60,41 +75,47 @@ const AdsContext = createContext<AdsContextData>(
 
 /* ================== PROVIDER ================== */
 
-export function AdsProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AdsProvider({ children }: { children: React.ReactNode }) {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const STORAGE_KEY = "@alugueja:ads";
 
-  /* 🔄 Carregar anúncios salvos */
+  /* 🔄 Load + MIGRAÇÃO */
   useEffect(() => {
     async function loadAds() {
       try {
-        const storedAds = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedAds) {
-          setAds(JSON.parse(storedAds));
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (stored) {
+          const parsed: Ad[] = JSON.parse(stored);
+
+          // 🔁 Migração: anúncios antigos sem categoria
+          const migrated = parsed.map((ad) => ({
+            ...ad,
+            category: ad.category ?? "CASA",
+          }));
+
+          setAds(migrated);
         }
-      } catch (error) {
-        console.log("Erro ao carregar anúncios", error);
+      } catch (e) {
+        console.log("Erro ao carregar anúncios", e);
       } finally {
         setLoaded(true);
       }
     }
+
     loadAds();
   }, []);
 
-  /* 💾 Persistir anúncios (após carregar) */
+  /* 💾 Persist */
   useEffect(() => {
     if (loaded) {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ads));
     }
   }, [ads, loaded]);
 
-  /* Criar anúncio (sempre pendente) */
+  /* ➕ Criar anúncio */
   const addAd = (adData: NewAd) => {
     const newAd: Ad = {
       id: Date.now().toString(),
@@ -104,10 +125,12 @@ export function AdsProvider({
       description: adData.description,
       price: adData.price,
       location: adData.location,
+      category: adData.category,
 
       beds: adData.beds,
       baths: adData.baths,
       images: adData.images,
+      contactPhone: adData.contactPhone,
 
       status: "PENDING",
       isFeatured: false,
@@ -117,18 +140,16 @@ export function AdsProvider({
     setAds((prev) => [newAd, ...prev]);
   };
 
-  /* Admin aprova anúncio */
+  /* ✅ Admin aprova */
   const approveAd = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
-        ad.id === adId
-          ? { ...ad, status: "APPROVED" }
-          : ad
+        ad.id === adId ? { ...ad, status: "APPROVED" } : ad
       )
     );
   };
 
-  /* Usuário solicita destaque (pagamento enviado) */
+  /* 💳 Solicita destaque */
   const requestPromotion = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
@@ -139,16 +160,12 @@ export function AdsProvider({
     );
   };
 
-  /* Admin confirma pagamento → destaque */
+  /* ⭐ Confirma pagamento */
   const promoteAd = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
         ad.id === adId && ad.status === "PAYMENT_PENDING"
-          ? {
-              ...ad,
-              isFeatured: true,
-              status: "APPROVED",
-            }
+          ? { ...ad, isFeatured: true, status: "APPROVED" }
           : ad
       )
     );

@@ -1,49 +1,67 @@
-import { View, ScrollView, TouchableOpacity, Text } from "react-native";
-import { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-const categories = [
-  "Todos",
-  "Casas",
-  "Apartamentos",
-  "Pousadas",
-  "Chalés",
-  "Luxo",
+const CATEGORIES = [
+  { label: "Todos", value: "ALL" },
+  { label: "Casas", value: "CASAS" },
+  { label: "Apartamentos", value: "APARTAMENTO" },
+  { label: "Pousadas", value: "POUSADA" },
+  { label: "Lanchas", value: "LANCHA" },
+  { label: "Ferramentas", value: "FERRAMENTA" },
 ];
 
-export default function CategorySelector({ onSelect }) {
-  const [active, setActive] = useState("Todos");
+type Props = {
+  selected: string;
+  onSelect: (category: string) => void;
+};
 
+export default function CategorySelector({ selected, onSelect }: Props) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ marginTop: 15 }}
-    >
-      {categories.map(cat => (
-        <TouchableOpacity
-          key={cat}
-          onPress={() => {
-            setActive(cat);
-            onSelect && onSelect(cat);
-          }}
-          style={{
-            paddingVertical: 8,
-            paddingHorizontal: 15,
-            backgroundColor: active === cat ? "#2C6EFA" : "#EDEDED",
-            borderRadius: 20,
-            marginRight: 10,
-          }}
-        >
-          <Text
-            style={{
-              color: active === cat ? "#FFF" : "#555",
-              fontWeight: "600",
-            }}
+    <View style={styles.container}>
+      {CATEGORIES.map((cat) => {
+        const isActive = selected === cat.value;
+
+        return (
+          <TouchableOpacity
+            key={cat.value}
+            style={[styles.button, isActive && styles.active]}
+            onPress={() => onSelect(cat.value)}
+            activeOpacity={0.8}
           >
-            {cat}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+            <Text style={[styles.text, isActive && styles.activeText]}>
+              {cat.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }
+
+/* ================== STYLES ================== */
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  button: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#EDEDED",
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  active: {
+    backgroundColor: "#2C6EFA",
+  },
+  text: {
+    color: "#555",
+    fontWeight: "600",
+  },
+  activeText: {
+    color: "#FFF",
+  },
+});

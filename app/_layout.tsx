@@ -6,8 +6,11 @@ import { ActivityIndicator, View } from "react-native";
 import { AdsProvider } from "../contexts/AdsContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { FavoritesProvider } from "../contexts/FavoritesContext";
+import { UsersProvider } from "../contexts/UsersContext";
 
 SplashScreen.preventAutoHideAsync();
+
+/* ================== APP CONTENT ================== */
 
 function AppContent() {
   const { loading } = useAuth();
@@ -35,14 +38,18 @@ function AppContent() {
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
+/* ================== ROOT ================== */
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AdsProvider>
-        <FavoritesProvider>
-          <AppContent />
-        </FavoritesProvider>
-      </AdsProvider>
-    </AuthProvider>
+    <UsersProvider>
+      <AuthProvider>
+        <AdsProvider>
+          <FavoritesProvider>
+            <AppContent />
+          </FavoritesProvider>
+        </AdsProvider>
+      </AuthProvider>
+    </UsersProvider>
   );
 }

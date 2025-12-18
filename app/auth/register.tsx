@@ -1,21 +1,53 @@
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
 import { useAuth } from "../../contexts/AuthContext";
+import { useUsers } from "../../contexts/UsersContext";
 
 export default function Register() {
-  const { signIn } = useAuth();
   const router = useRouter();
+  const { signIn } = useAuth();
+  const { register, userExists } = useUsers();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleRegister = () => {
+    if (!name || !email || !password) {
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
+      return;
+    }
+
+    if (userExists(email)) {
+      Alert.alert(
+        "Email já cadastrado",
+        "Este email já está em uso. Faça login."
+      );
+      return;
+    }
+
+    const newUser = register({
+      name,
+      email: email.toLowerCase(),
+      password,
+      phone: "55999999999", // depois vira input
+    });
+
     signIn({
-      id: "2",
-      name: name,
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
       role: "USER",
+      phone: newUser.phone,
     });
 
     router.replace("/(tabs)");
@@ -25,7 +57,9 @@ export default function Register() {
     <View style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Criar conta</Text>
-        <Text style={styles.subtitle}>Anuncie ou encontre imóveis facilmente</Text>
+        <Text style={styles.subtitle}>
+          Anuncie ou encontre imóveis facilmente
+        </Text>
 
         <TextInput
           placeholder="Nome"
@@ -40,6 +74,7 @@ export default function Register() {
           onChangeText={setEmail}
           style={styles.input}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
 
         <TextInput
@@ -64,6 +99,8 @@ export default function Register() {
     </View>
   );
 }
+
+/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
   container: {
@@ -109,11 +146,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "700",
-  },
-  link: {
-    marginTop: 14,
-    textAlign: "center",
-    color: "#555",
   },
   footer: {
     marginTop: 20,

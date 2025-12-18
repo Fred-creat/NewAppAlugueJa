@@ -11,8 +11,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAds } from "../contexts/AdsContext";
+
+import { Category, useAds } from "../contexts/AdsContext";
 import { useAuth } from "../contexts/AuthContext";
+
+/* ================== CATEGORIAS ================== */
+
+const CATEGORIES: { label: string; value: Category }[] = [
+  { label: "Casas", value: "CASAS" },
+  { label: "Apartamentos", value: "APARTAMENTO" },
+  { label: "Pousada", value: "POUSADA" },
+  { label: "Lancha", value: "LANCHA" },
+  { label: "Ferramenta", value: "FERRAMENTA" },
+];
 
 export default function CreateAd() {
   const router = useRouter();
@@ -25,25 +36,30 @@ export default function CreateAd() {
   const [beds, setBeds] = useState("");
   const [baths, setBaths] = useState("");
   const [description, setDescription] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
 
   const isValid =
     title.trim() &&
     price.trim() &&
     location.trim() &&
-    beds.trim() &&
-    baths.trim() &&
     description.trim() &&
+    contactPhone.trim() &&
+    category !== null &&
     images.length > 0;
 
-  /* ===== SELECIONAR IMAGENS ===== */
+  /* ================== IMAGENS ================== */
+
   const pickImages = async () => {
     if (images.length >= 5) {
       Alert.alert("Limite atingido", "Você pode adicionar até 5 fotos.");
       return;
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permission.granted) {
       Alert.alert("Permissão necessária", "Permita acesso às imagens.");
       return;
@@ -51,25 +67,25 @@ export default function CreateAd() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
       allowsMultipleSelection: true,
       selectionLimit: 5 - images.length,
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      const selected = result.assets.map((asset) => asset.uri);
+      const selected = result.assets.map((a) => a.uri);
       setImages((prev) => [...prev, ...selected].slice(0, 5));
     }
   };
 
-  /* ===== REMOVER IMAGEM ===== */
   const removeImage = (uri: string) => {
     setImages((prev) => prev.filter((img) => img !== uri));
   };
 
-  /* ===== SUBMIT ===== */
+  /* ================== SUBMIT ================== */
+
   const handleSubmit = () => {
-    if (!isValid || !user) {
+    if (!user || !isValid || !category) {
       Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
       return;
     }
@@ -80,9 +96,11 @@ export default function CreateAd() {
       price,
       location,
       description,
-      beds: Number(beds),
-      baths: Number(baths),
+      category,
+      beds: Number(beds) || 0,
+      baths: Number(baths) || 0,
       images,
+      contactPhone,
     });
 
     Alert.alert(
@@ -96,6 +114,29 @@ export default function CreateAd() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Criar anúncio</Text>
+
+      {/* CATEGORIAS */}
+      <View style={styles.categories}>
+        {CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat.value}
+            style={[
+              styles.categoryButton,
+              category === cat.value && styles.categoryActive,
+            ]}
+            onPress={() => setCategory(cat.value)}
+          >
+            <Text
+              style={[
+                styles.categoryText,
+                category === cat.value && styles.categoryTextActive,
+              ]}
+            >
+              {cat.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* IMAGENS */}
       <TouchableOpacity style={styles.imagePicker} onPress={pickImages}>
@@ -121,42 +162,18 @@ export default function CreateAd() {
       )}
 
       {/* CAMPOS */}
-      <TextInput
-        placeholder="Título"
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-      />
+      <TextInput placeholder="Título" style={styles.input} value={title} onChangeText={setTitle} />
+      <TextInput placeholder="Preço" keyboardType="numeric" style={styles.input} value={price} onChangeText={setPrice} />
+      <TextInput placeholder="Localização" style={styles.input} value={location} onChangeText={setLocation} />
+      <TextInput placeholder="Quartos" keyboardType="numeric" style={styles.input} value={beds} onChangeText={setBeds} />
+      <TextInput placeholder="Banheiros" keyboardType="numeric" style={styles.input} value={baths} onChangeText={setBaths} />
 
       <TextInput
-        placeholder="Preço"
-        keyboardType="numeric"
+        placeholder="Telefone / WhatsApp"
+        keyboardType="phone-pad"
         style={styles.input}
-        value={price}
-        onChangeText={setPrice}
-      />
-
-      <TextInput
-        placeholder="Localização"
-        style={styles.input}
-        value={location}
-        onChangeText={setLocation}
-      />
-
-      <TextInput
-        placeholder="Quartos"
-        keyboardType="numeric"
-        style={styles.input}
-        value={beds}
-        onChangeText={setBeds}
-      />
-
-      <TextInput
-        placeholder="Banheiros"
-        keyboardType="numeric"
-        style={styles.input}
-        value={baths}
-        onChangeText={setBaths}
+        value={contactPhone}
+        onChangeText={setContactPhone}
       />
 
       <TextInput
@@ -188,7 +205,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "700",
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  categories: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  categoryButton: {
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#DDD",
+  },
+  categoryActive: {
+    backgroundColor: "#2C6EFA",
+    borderColor: "#2C6EFA",
+  },
+  categoryText: {
+    color: "#555",
+    fontWeight: "600",
+  },
+  categoryTextActive: {
+    color: "#FFF",
   },
   input: {
     backgroundColor: "#FFF",
@@ -248,6 +290,5 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "700",
-    lineHeight: 18,
   },
 });

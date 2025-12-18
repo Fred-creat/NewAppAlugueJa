@@ -1,7 +1,18 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
+
+const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD;
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -10,11 +21,44 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Erro", "Preencha email e senha");
+      return;
+    }
+
+    /* ================= ADMIN ================= */
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      signIn({
+        id: "admin",
+        name: "Administrador",
+        email,
+        role: "ADMIN",
+      });
+
+      router.replace("/(tabs)");
+      return;
+    }
+
+    /* ================= USUÁRIO ================= */
+    const storedUsers = await AsyncStorage.getItem("@alugueja:users");
+    const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+    const user = users.find(
+      (u: any) => u.email === email && u.password === password
+    );
+
+    if (!user) {
+      Alert.alert("Erro", "Email ou senha inválidos");
+      return;
+    }
+
     signIn({
-      id: "1",
-      name: "Admin",
-      role: "ADMIN",
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: "USER",
+      phone: user.phone,
     });
 
     router.replace("/(tabs)");
@@ -60,6 +104,9 @@ export default function Login() {
     </View>
   );
 }
+
+/* ================== STYLES ================== */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
