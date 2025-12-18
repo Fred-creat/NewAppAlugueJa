@@ -16,12 +16,12 @@ export type AdStatus =
 /* ✅ CATEGORIAS SUPORTADAS */
 export type Category =
   | "CASAS"
-  | "APARTAMENTO"
-  | "POUSADA"
-  | "KITNET"
-  | "TERRENO"
-  | "LANCHA"
-  | "FERRAMENTA";
+  | "APARTAMENTOS"
+  | "POUSADAS"
+  | "KITNETS"
+  | "TERRENOS"
+  | "LANCHAS"
+  | "FERRAMENTAS";
 
 export type Ad = {
   id: string;

@@ -3,9 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 const CATEGORIES = [
   { label: "Todos", value: "ALL" },
   { label: "Casas", value: "CASAS" },
-  { label: "Apartamentos", value: "APARTAMENTO" },
-  { label: "Pousadas", value: "POUSADA" },
-  { label: "Lanchas", value: "LANCHA" },
+  { label: "Apartamentos", value: "APARTAMENTOS" },
+  { label: "Pousadas", value: "POUSADAS" },
+  { label: "Lanchas", value: "LANCHAS" },
   { label: "Ferramentas", value: "FERRAMENTA" },
 ];
 

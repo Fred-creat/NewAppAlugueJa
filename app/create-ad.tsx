@@ -19,10 +19,10 @@ import { useAuth } from "../contexts/AuthContext";
 
 const CATEGORIES: { label: string; value: Category }[] = [
   { label: "Casas", value: "CASAS" },
-  { label: "Apartamentos", value: "APARTAMENTO" },
-  { label: "Pousada", value: "POUSADA" },
-  { label: "Lancha", value: "LANCHA" },
-  { label: "Ferramenta", value: "FERRAMENTA" },
+  { label: "Apartamentos", value: "APARTAMENTOS" },
+  { label: "Pousada", value: "POUSADAS" },
+  { label: "Lancha", value: "LANCHAS" },
+  { label: "Ferramenta", value: "FERRAMENTAS" },
 ];
 
 export default function CreateAd() {
