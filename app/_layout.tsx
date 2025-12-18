@@ -2,8 +2,10 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+
 import { AdsProvider } from "../contexts/AdsContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { FavoritesProvider } from "../contexts/FavoritesContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +39,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AdsProvider>
-        <AppContent />
+        <FavoritesProvider>
+          <AppContent />
+        </FavoritesProvider>
       </AdsProvider>
     </AuthProvider>
   );

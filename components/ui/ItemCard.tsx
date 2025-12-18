@@ -1,7 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { memo } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import { useAuth } from "../../contexts/AuthContext";
+import { useFavorites } from "../../contexts/FavoritesContext";
 
 type ItemCardProps = {
+  id: string;
   title: string;
   price: string;
   location: string;
@@ -13,6 +26,7 @@ type ItemCardProps = {
 };
 
 function ItemCard({
+  id,
   title,
   price,
   location,
@@ -22,10 +36,24 @@ function ItemCard({
   onPress,
   isFeatured = false,
 }: ItemCardProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
   const imageUri =
     image && image.length > 0
       ? image
       : "https://via.placeholder.com/400x300?text=Sem+imagem";
+
+  const favorite = user ? isFavorite(id, user.id) : false;
+
+  const handleFavorite = () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    toggleFavorite(id, user.id);
+  };
 
   return (
     <Pressable
@@ -39,6 +67,20 @@ function ItemCard({
     >
       <Image source={{ uri: imageUri }} style={styles.image} />
 
+      {/* ❤️ FAVORITO */}
+      <TouchableOpacity
+        style={styles.favoriteButton}
+        onPress={handleFavorite}
+        activeOpacity={0.8}
+      >
+        <Ionicons
+          name={favorite ? "heart" : "heart-outline"}
+          size={22}
+          color={favorite ? "#E53935" : "#FFF"}
+        />
+      </TouchableOpacity>
+
+      {/* BADGE DESTAQUE */}
       {isFeatured && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>DESTAQUE</Text>
@@ -86,6 +128,14 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 180,
     backgroundColor: "#EEE",
+  },
+  favoriteButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    padding: 6,
+    borderRadius: 20,
   },
   badge: {
     position: "absolute",

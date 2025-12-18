@@ -1,7 +1,17 @@
-import { Linking } from "react-native";
-import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
+import { useLocalSearchParams } from "expo-router";
+import { useAds } from "../../contexts/AdsContext";
+
+/* ================== WHATSAPP ================== */
 
 const openWhatsApp = (phone: string, title: string) => {
   const message = `Olá! Tenho interesse no imóvel "${title}" que vi no AlugueJá.`;
@@ -9,74 +19,70 @@ const openWhatsApp = (phone: string, title: string) => {
   Linking.openURL(url);
 };
 
-const MOCK_ITEMS = [
-  {
-    id: "1",
-    title: "Casa Vista Mar",
-    price: "4.500",
-    location: "Morro de São Paulo",
-    image: "https://picsum.photos/600/400?random=1",
-    beds: 3,
-    baths: 2,
-    description:
-      "Casa ampla com vista para o mar, ideal para temporada ou moradia. Próxima à praia e ao centro.",
-    phone: "55999999999",
-  },
-  {
-    id: "2",
-    title: "Apartamento Moderno",
-    price: "2.800",
-    location: "Centro da Cidade",
-    image: "https://picsum.photos/600/400?random=2",
-    beds: 2,
-    baths: 1,
-    description:
-      "Apartamento moderno, bem localizado, próximo a comércios e transporte público.",
-    phone: "55888888888",
-  },
-];
+/* ================== SCREEN ================== */
 
 export default function ItemDetails() {
-  const { id } = useLocalSearchParams();
-  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { ads } = useAds();
 
-  const item = MOCK_ITEMS.find((i) => i.id === id);
+  const ad = ads.find((item) => item.id === id);
 
-  if (!item) {
+  if (!ad) {
     return (
       <View style={styles.center}>
-        <Text>Item não encontrado</Text>
+        <Text>Anúncio não encontrado</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <Image
+        source={{ uri: ad.images[0] }}
+        style={styles.image}
+      />
 
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.price}>R$ {item.price} / mês</Text>
-      <Text style={styles.location}>{item.location}</Text>
+      <Text style={styles.title}>{ad.title}</Text>
+
+      <Text style={styles.price}>R$ {ad.price}</Text>
+
+      <Text style={styles.location}>{ad.location}</Text>
 
       <View style={styles.infoRow}>
-        <Text>{item.beds} quartos</Text>
-        <Text>{item.baths} banheiros</Text>
+        <Text>{ad.beds} quartos</Text>
+        <Text>{ad.baths} banheiros</Text>
       </View>
 
-      <Text style={styles.description}>{item.description}</Text>
-<TouchableOpacity
-  style={styles.contactButton}
-  onPress={() => openWhatsApp(item.phone, item.title)}
->
-  <Text style={styles.contactButtonText}>Falar com anunciante</Text>
-</TouchableOpacity>
+      <Text style={styles.description}>
+        {ad.description}
+      </Text>
 
+      {/* CTA CONTATO */}
+      <TouchableOpacity
+        style={styles.contactButton}
+        onPress={() =>
+          openWhatsApp(
+            "55999999999", // 🔜 backend futuramente
+            ad.title
+          )
+        }
+      >
+        <Text style={styles.contactButtonText}>
+          Falar com anunciante
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
+/* ================== STYLES ================== */
+
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 16,
     backgroundColor: "#FFF",
   },
@@ -85,17 +91,18 @@ const styles = StyleSheet.create({
     height: 260,
     borderRadius: 14,
     marginBottom: 16,
+    backgroundColor: "#EEE",
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   price: {
     fontSize: 20,
     fontWeight: "700",
     color: "#2C6EFA",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   location: {
     fontSize: 14,
@@ -118,6 +125,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
+    marginBottom: 30,
   },
   contactButtonText: {
     color: "#FFF",

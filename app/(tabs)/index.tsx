@@ -99,18 +99,20 @@ export default function Index() {
           )}
         </>
       }
-      renderItem={({ item }) => (
-        <ItemCard
-          title={item.title}
-          price={item.price}
-          location={item.location}
-          image={item.images[0]}
-          beds={item.beds}
-          baths={item.baths}
-          isFeatured={item.isFeatured}
-          onPress={() => router.push(`/item/${item.id}`)}
-        />
-      )}
+    renderItem={({ item }) => (
+  <ItemCard
+    id={item.id}
+    title={item.title}
+    price={item.price}
+    location={item.location}
+    image={item.images[0]}
+    beds={item.beds}
+    baths={item.baths}
+    isFeatured={item.isFeatured}
+    onPress={() => router.push(`/item/${item.id}`)}
+  />
+)}
+
       ListFooterComponent={<View style={{ height: 20 }} />}
     />
   );

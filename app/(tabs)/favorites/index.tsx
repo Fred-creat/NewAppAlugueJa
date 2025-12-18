@@ -1,35 +1,15 @@
-import { View, Text, StyleSheet, FlatList } from "react-native";
-import { useAuth } from "../../../contexts/AuthContext";
-import ItemCard from "../../../components/ui/ItemCard";
 import { useRouter } from "expo-router";
+import { FlatList, StyleSheet, Text, View } from "react-native";
+import ItemCard from "../../../components/ui/ItemCard";
+import { useAds } from "../../../contexts/AdsContext";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useFavorites } from "../../../contexts/FavoritesContext";
 
 export default function Favorites() {
   const { user } = useAuth();
+  const { ads } = useAds();
+  const { isFavorite } = useFavorites();
   const router = useRouter();
-
-  // Mock de favoritos (depois vem do backend)
-  const favorites = [
-    {
-      id: 1,
-      title: "Casa Vista Mar",
-      price: "4.500",
-      location: "Morro de São Paulo",
-      image: "https://picsum.photos/400/300?random=1",
-      beds: 3,
-      baths: 2,
-      isFeatured: true,
-    },
-    {
-      id: 3,
-      title: "Cobertura Luxo",
-      price: "6.200",
-      location: "Praia Grande",
-      image: "https://picsum.photos/400/300?random=3",
-      beds: 4,
-      baths: 3,
-      isFeatured: false,
-    },
-  ];
 
   if (!user) {
     return (
@@ -39,7 +19,11 @@ export default function Favorites() {
     );
   }
 
-  if (favorites.length === 0) {
+  const favoriteAds = ads.filter((ad) =>
+    isFavorite(ad.id, user.id)
+  );
+
+  if (favoriteAds.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Nenhum favorito ainda</Text>
@@ -55,20 +39,26 @@ export default function Favorites() {
       <Text style={styles.title}>Favoritos</Text>
 
       <FlatList
-        data={favorites}
-        keyExtractor={(item) => String(item.id)}
-        showsVerticalScrollIndicator={false}
+        data={favoriteAds}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ItemCard
-            {...item}
-            onPress={() => router.push(`/item/${item.id}`)}
+            title={item.title}
+            price={item.price}
+            location={item.location}
+            image={item.images[0]}
+            beds={item.beds}
+            baths={item.baths}
             isFeatured={item.isFeatured}
+            onPress={() => router.push(`/item/${item.id}`)}
           />
         )}
       />
     </View>
   );
 }
+
+/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
   container: {

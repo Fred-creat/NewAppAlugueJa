@@ -32,10 +32,17 @@ export type Ad = {
   createdAt: number;
 };
 
-type NewAd = Omit<
-  Ad,
-  "id" | "status" | "isFeatured" | "createdAt"
->;
+/* 🔐 Tipagem segura para criação */
+type NewAd = {
+  userId: string;
+  title: string;
+  description: string;
+  price: string;
+  location: string;
+  beds: number;
+  baths: number;
+  images: string[];
+};
 
 type AdsContextData = {
   ads: Ad[];
@@ -59,6 +66,8 @@ export function AdsProvider({
   children: React.ReactNode;
 }) {
   const [ads, setAds] = useState<Ad[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
   const STORAGE_KEY = "@alugueja:ads";
 
   /* 🔄 Carregar anúncios salvos */
@@ -71,15 +80,19 @@ export function AdsProvider({
         }
       } catch (error) {
         console.log("Erro ao carregar anúncios", error);
+      } finally {
+        setLoaded(true);
       }
     }
     loadAds();
   }, []);
 
-  /* 💾 Persistir anúncios automaticamente */
+  /* 💾 Persistir anúncios (após carregar) */
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ads));
-  }, [ads]);
+    if (loaded) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ads));
+    }
+  }, [ads, loaded]);
 
   /* Criar anúncio (sempre pendente) */
   const addAd = (adData: NewAd) => {
@@ -104,7 +117,7 @@ export function AdsProvider({
     setAds((prev) => [newAd, ...prev]);
   };
 
-  /* Aprovação inicial do anúncio (admin) */
+  /* Admin aprova anúncio */
   const approveAd = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
@@ -115,7 +128,7 @@ export function AdsProvider({
     );
   };
 
-  /* Usuário solicita destaque (pagamento feito) */
+  /* Usuário solicita destaque (pagamento enviado) */
   const requestPromotion = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
@@ -126,7 +139,7 @@ export function AdsProvider({
     );
   };
 
-  /* Admin confirma pagamento → vira destaque */
+  /* Admin confirma pagamento → destaque */
   const promoteAd = (adId: string) => {
     setAds((prev) =>
       prev.map((ad) =>
