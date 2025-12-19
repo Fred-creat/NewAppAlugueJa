@@ -32,7 +32,7 @@ Aplicativo de anúncios desenvolvido para facilitar a publicação e busca de im
 ## 📸 Screenshots
 <div>
 <img src"
-![WhatsApp Image 2025-12-19 at 10 30 24 AM (1)](https://github.com/user-attachments/assets/275c8350-a54b-42cd-899b-47f1a62b0e4c) width:"40" height:"60"
+![WhatsApp Image 2025-12-19 at 10 30 24 AM (1)](https://github.com/user-attachments/assets/275c8350-a54b-42cd-899b-47f1a62b0e4c)" width:"40" height:"60"/>
 </div>
 
 ---
