@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import ItemCard from "../components/ui/ItemCard";
 import { useAds } from "../contexts/AdsContext";
@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F4F6FA",
     padding: 16,
+    marginTop: 40,
   },
   title: {
     fontSize: 26,

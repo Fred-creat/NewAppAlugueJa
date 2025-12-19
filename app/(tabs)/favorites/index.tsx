@@ -65,11 +65,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F4F6FA",
     padding: 16,
+    marginTop: 40,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     marginBottom: 12,
+    marginTop: 8,
   },
   center: {
     flex: 1,
