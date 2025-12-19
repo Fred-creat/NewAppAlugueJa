@@ -1,50 +1,47 @@
-# Welcome to your Expo app 👋
+# Welcome
+# 🏠 App AlugueJá
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo de anúncios desenvolvido para facilitar a publicação e busca de imóveis, lanchas e ferramentas, com foco em usabilidade e experiência do usuário.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Funcionalidades
 
-   ```bash
-   npm install
-   ```
+- Cadastro e login de usuários
+- Diferenciação entre usuário comum e administrador
+- Criação e aprovação de anúncios
+- Filtro por categorias (Casas, Apartamentos, Lanchas, etc.)
+- Busca por título e localização
+- Sistema de favoritos
+- Contato direto via WhatsApp
+- Persistência de dados local
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Tecnologias Utilizadas
 
-In the output, you'll find options to open the app in a
+- React Native
+- Expo
+- JavaScript (ES6+)
+- Context API
+- AsyncStorage
+- Expo Router
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📸 Screenshots
+<div>
+<img src"
+![WhatsApp Image 2025-12-19 at 10 30 24 AM (1)](https://github.com/user-attachments/assets/275c8350-a54b-42cd-899b-47f1a62b0e4c) width:"40" height:"60"
+</div>
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## ▶️ Como executar o projeto
 
 ```bash
-npm run reset-project
-```
+# Instale as dependências
+npm install
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Inicie o projeto
+npx expo start
