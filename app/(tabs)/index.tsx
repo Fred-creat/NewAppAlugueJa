@@ -28,6 +28,7 @@ const DEFAULT_FILTERS: FilterValues = {
   category: "ALL",
   minPrice: null,
   maxPrice: null,
+  location: ""
 };
 
 export default function Index() {

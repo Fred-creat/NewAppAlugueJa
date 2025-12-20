@@ -1,4 +1,4 @@
-import { ScrollView, Image, View } from "react-native";
+import { Image, ScrollView, } from "react-native";
 
 export default function PhotoCarousel({ images = [] }) {
   return (

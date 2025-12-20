@@ -1,12 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
 import ItemCard from "../../components/ui/ItemCard";
 import { useAds } from "../../contexts/AdsContext";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function AdminApprove() {
   const { ads, approveAd, promoteAd } = useAds();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   if (!isAdmin) {
     return (
@@ -16,12 +24,17 @@ export default function AdminApprove() {
     );
   }
 
-  const pendingAds = ads.filter((ad) => ad.status === "PENDING");
+  const pendingAds = ads.filter(
+    (ad) => ad.status === "PENDING"
+  );
+
   const paymentPendingAds = ads.filter(
     (ad) => ad.status === "PAYMENT_PENDING"
   );
 
-  const confirmApprove = (id: string) => {
+  /* ================== AÇÕES ADMIN ================== */
+
+  const confirmApprove = (adId: string) => {
     Alert.alert(
       "Aprovar anúncio",
       "Deseja aprovar este anúncio e publicá-lo?",
@@ -29,14 +42,19 @@ export default function AdminApprove() {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Aprovar",
-          style: "default",
-          onPress: () => approveAd(id),
+          onPress: () => {
+            approveAd({
+              adId,
+              approvedBy: user.id, // 🔥 pronto para backend
+              approvedAt: new Date().toISOString(),
+            });
+          },
         },
       ]
     );
   };
 
-  const confirmPayment = (id: string) => {
+  const confirmPayment = (adId: string) => {
     Alert.alert(
       "Confirmar pagamento",
       "Deseja confirmar o pagamento e destacar este anúncio?",
@@ -44,8 +62,13 @@ export default function AdminApprove() {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Confirmar",
-          style: "default",
-          onPress: () => promoteAd(id),
+          onPress: () => {
+            promoteAd({
+              adId,
+              confirmedBy: user.id, // 🔥 auditoria futura
+              confirmedAt: new Date().toISOString(),
+            });
+          },
         },
       ]
     );
@@ -55,11 +78,13 @@ export default function AdminApprove() {
     <View style={styles.container}>
       <Text style={styles.title}>Painel Administrativo</Text>
 
-      {/* ================== ANÚNCIOS PENDENTES ================== */}
+      {/* ================== PENDENTES ================== */}
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={20} color="#F39C12" />
-          <Text style={styles.sectionTitle}>Anúncios pendentes</Text>
+          <Text style={styles.sectionTitle}>
+            Anúncios pendentes
+          </Text>
         </View>
 
         {pendingAds.length === 0 ? (
@@ -73,6 +98,7 @@ export default function AdminApprove() {
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <ItemCard
+                  id={item.id}
                   title={item.title}
                   price={item.price}
                   location={item.location}
@@ -90,7 +116,9 @@ export default function AdminApprove() {
                     size={18}
                     color="#FFF"
                   />
-                  <Text style={styles.buttonText}>Aprovar anúncio</Text>
+                  <Text style={styles.buttonText}>
+                    Aprovar anúncio
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -102,7 +130,9 @@ export default function AdminApprove() {
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
           <Ionicons name="card-outline" size={20} color="#8E44AD" />
-          <Text style={styles.sectionTitle}>Pagamentos em análise</Text>
+          <Text style={styles.sectionTitle}>
+            Pagamentos em análise
+          </Text>
         </View>
 
         {paymentPendingAds.length === 0 ? (
@@ -116,6 +146,7 @@ export default function AdminApprove() {
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <ItemCard
+                  id={item.id}
                   title={item.title}
                   price={item.price}
                   location={item.location}
