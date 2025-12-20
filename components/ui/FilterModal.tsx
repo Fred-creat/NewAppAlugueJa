@@ -1,17 +1,89 @@
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-export default function FilterModal({ visible, onClose }) {
-  const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [selectedType, setSelectedType] = useState(null);
+import Button from "./Button";
+import LocationFilter from "./LocationFilter";
+import PriceRange from "./PriceRange";
 
-  const propertyTypes = ["Apartamento", "Casa", "Comercial", "Terreno"];
+/* ================== TYPES ================== */
+
+export type FilterValues = {
+  category: string;
+  minPrice: number | null;
+  maxPrice: number | null;
+  location: string;
+};
+
+type Props = {
+  visible: boolean;
+  filters: FilterValues;
+  onApply: (filters: FilterValues) => void;
+  onClear: () => void;
+  onClose: () => void;
+};
+
+/* ================== CONSTANTS ================== */
+
+const PROPERTY_TYPES = [
+  { label: "Todos", value: "ALL" },
+  { label: "Casa", value: "CASA" },
+  { label: "Apartamento", value: "APARTAMENTO" },
+  { label: "Pousada", value: "POUSADA" },
+  { label: "Lancha", value: "LANCHA" },
+  { label: "Ferramenta", value: "FERRAMENTA" },
+];
+
+/* ================== COMPONENT ================== */
+
+export default function FilterModal({
+  visible,
+  filters,
+  onApply,
+  onClear,
+  onClose,
+}: Props) {
+  /* ===== Estado local do modal ===== */
+  const [localFilters, setLocalFilters] =
+    useState<FilterValues>(filters);
+
+  /* Sempre que abrir, sincroniza com o estado global */
+  useEffect(() => {
+    if (visible) {
+      setLocalFilters(filters);
+    }
+  }, [visible, filters]);
+
+  const handleApply = () => {
+    onApply(localFilters);
+    onClose();
+  };
+
+  const handleClear = () => {
+    const cleared: FilterValues = {
+      category: "ALL",
+      minPrice: null,
+      maxPrice: null,
+      location: "",
+    };
+
+    setLocalFilters(cleared);
+    onClear();
+    onClose();
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
+          {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Filtros</Text>
             <TouchableOpacity onPress={onClose}>
@@ -20,55 +92,86 @@ export default function FilterModal({ visible, onClose }) {
           </View>
 
           <ScrollView style={styles.scrollView}>
-            {/* Tipo de Imóvel */}
+            {/* CATEGORIA */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo de Imóvel</Text>
-              {propertyTypes.map((type) => (
+              <Text style={styles.sectionTitle}>Categoria</Text>
+
+              {PROPERTY_TYPES.map((item) => (
                 <TouchableOpacity
-                  key={type}
-                  onPress={() => setSelectedType(type)}
+                  key={item.value}
                   style={styles.checkbox}
+                  onPress={() =>
+                    setLocalFilters((prev) => ({
+                      ...prev,
+                      category: item.value,
+                    }))
+                  }
                 >
                   <View
                     style={[
                       styles.checkboxBox,
-                      selectedType === type && styles.checkboxBoxChecked,
+                      localFilters.category === item.value &&
+                        styles.checkboxBoxChecked,
                     ]}
                   >
-                    {selectedType === type && (
-                      <Ionicons name="checkmark" size={16} color="#2C6EFA" />
+                    {localFilters.category === item.value && (
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color="#2C6EFA"
+                      />
                     )}
                   </View>
-                  <Text style={styles.checkboxLabel}>{type}</Text>
+                  <Text style={styles.checkboxLabel}>
+                    {item.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {/* Preço */}
+            {/* LOCALIZAÇÃO */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Preço (R$)</Text>
-              <View style={styles.priceRange}>
-                <Text style={styles.priceText}>R$ {priceRange[0]}</Text>
-                <Text style={styles.separator}>-</Text>
-                <Text style={styles.priceText}>R$ {priceRange[1]}</Text>
-              </View>
+              <Text style={styles.sectionTitle}>
+                Localização
+              </Text>
+
+              <LocationFilter
+                value={localFilters.location}
+                onChange={(text) =>
+                  setLocalFilters((prev) => ({
+                    ...prev,
+                    location: text,
+                  }))
+                }
+              />
             </View>
+
+            {/* PREÇO */}
+            <PriceRange
+              minPrice={localFilters.minPrice}
+              maxPrice={localFilters.maxPrice}
+              onChange={(min, max) =>
+                setLocalFilters((prev) => ({
+                  ...prev,
+                  minPrice: min,
+                  maxPrice: max,
+                }))
+              }
+            />
           </ScrollView>
 
+          {/* FOOTER */}
           <View style={styles.footer}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.buttonSecondary}
-            >
-              <Text style={styles.buttonSecondaryText}>Limpar</Text>
-            </TouchableOpacity>
+            <Button
+              title="Limpar"
+              variant="secondary"
+              onPress={handleClear}
+            />
 
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.buttonPrimary}
-            >
-              <Text style={styles.buttonPrimaryText}>Aplicar Filtros</Text>
-            </TouchableOpacity>
+            <Button
+              title="Aplicar filtros"
+              onPress={handleApply}
+            />
           </View>
         </View>
       </View>
@@ -76,32 +179,31 @@ export default function FilterModal({ visible, onClose }) {
   );
 }
 
+/* ================== STYLES ================== */
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: "#FFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 16,
     maxHeight: "90%",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#333",
   },
   scrollView: {
     paddingHorizontal: 20,
@@ -113,7 +215,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
     marginBottom: 12,
   },
   checkbox: {
@@ -126,68 +227,24 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#E0E0E0",
+    borderColor: "#DDD",
     marginRight: 12,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   checkboxBoxChecked: {
-    backgroundColor: "#F0F5FF",
     borderColor: "#2C6EFA",
+    backgroundColor: "#F0F5FF",
   },
   checkboxLabel: {
     fontSize: 14,
-    color: "#666",
-  },
-  priceRange: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F2F2F2",
-    padding: 12,
-    borderRadius: 8,
-  },
-  priceText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    flex: 1,
-    textAlign: "center",
-  },
-  separator: {
-    marginHorizontal: 8,
-    color: "#999",
+    color: "#555",
   },
   footer: {
     flexDirection: "row",
     padding: 20,
+    gap: 12,
     borderTopWidth: 1,
     borderTopColor: "#E0E0E0",
-    gap: 12,
-  },
-  buttonSecondary: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2C6EFA",
-    alignItems: "center",
-  },
-  buttonSecondaryText: {
-    color: "#2C6EFA",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  buttonPrimary: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: "#2C6EFA",
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonPrimaryText: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 14,
   },
 });

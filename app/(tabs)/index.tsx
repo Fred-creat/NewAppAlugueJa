@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -8,125 +10,261 @@ import {
   View,
 } from "react-native";
 
-import CategorySelector from "../../components/ui/CategorySelector";
+import FilterModal, {
+  FilterValues,
+} from "../../components/ui/FilterModal";
 import ItemCard from "../../components/ui/ItemCard";
 import SearchBar from "../../components/ui/SearchBar";
+
 import { useAds } from "../../contexts/AdsContext";
 import { useAuth } from "../../contexts/AuthContext";
+
+type OrderType = "DEFAULT" | "PRICE_ASC" | "PRICE_DESC";
+
+const FILTER_STORAGE_KEY = "@alugueja:filters";
+
+/* ================== ESTADO BASE ================== */
+const DEFAULT_FILTERS: FilterValues = {
+  category: "ALL",
+  minPrice: null,
+  maxPrice: null,
+};
 
 export default function Index() {
   const { user } = useAuth();
   const { ads } = useAds();
   const router = useRouter();
 
-  // ✅ PADRÃO CORRETO
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [search, setSearch] = useState("");
+  /* ================== FILTROS ================== */
+  const [filters, setFilters] =
+    useState<FilterValues>(DEFAULT_FILTERS);
 
-  /* ✅ FILTRO FINAL (SEM BUG) */
+  const [search, setSearch] = useState("");
+  const [order, setOrder] = useState<OrderType>("DEFAULT");
+  const [filterVisible, setFilterVisible] = useState(false);
+
+  /* ================== LOAD FILTROS SALVOS ================== */
+  useEffect(() => {
+    async function loadFilters() {
+      const stored = await AsyncStorage.getItem(FILTER_STORAGE_KEY);
+      if (stored) {
+        setFilters(JSON.parse(stored));
+      }
+    }
+    loadFilters();
+  }, []);
+
+  /* ================== FILTRAGEM ================== */
   const filteredAds = useMemo(() => {
-    return ads
-      .filter((ad) => ad.status === "APPROVED")
-      .filter((ad) => {
-        if (selectedCategory === "ALL") return true;
-        return ad.category === selectedCategory;
-      })
-      .filter((ad) => {
-        if (!search) return true;
-        const q = search.toLowerCase();
-        return (
+    let result = ads.filter((ad) => ad.status === "APPROVED");
+
+    // Categoria
+    if (filters.category !== "ALL") {
+      result = result.filter(
+        (ad) => ad.category === filters.category
+      );
+    }
+
+    // Busca
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (ad) =>
           ad.title.toLowerCase().includes(q) ||
           ad.location.toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
-  }, [ads, selectedCategory, search]);
+      );
+    }
+
+    // Preço mínimo
+    if (filters.minPrice !== null) {
+      result = result.filter(
+        (ad) => Number(ad.price) >= filters.minPrice!
+      );
+    }
+
+    // Preço máximo
+    if (filters.maxPrice !== null) {
+      result = result.filter(
+        (ad) => Number(ad.price) <= filters.maxPrice!
+      );
+    }
+
+    // Destaques
+    const featured = result.filter((ad) => ad.isFeatured);
+    let normal = result.filter((ad) => !ad.isFeatured);
+
+    // Ordenação
+    if (order === "PRICE_ASC") {
+      normal = [...normal].sort(
+        (a, b) => Number(a.price) - Number(b.price)
+      );
+    }
+
+    if (order === "PRICE_DESC") {
+      normal = [...normal].sort(
+        (a, b) => Number(b.price) - Number(a.price)
+      );
+    }
+
+    return [...featured, ...normal];
+  }, [ads, search, filters, order]);
+
+  /* ================== LIMPAR FILTROS (TOTAL) ================== */
+  const clearFilters = async () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearch("");
+    setOrder("DEFAULT");
+
+    await AsyncStorage.removeItem(FILTER_STORAGE_KEY);
+  };
 
   return (
-    <FlatList
-      data={filteredAds}
-      keyExtractor={(item) => item.id}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.container}
-      ListHeaderComponent={
-        <>
-          {/* HEADER */}
-          <View style={styles.headerContainer}>
-            <View>
-              <Text style={styles.headerTitle}>
-                {user ? `Olá, ${user.name}` : "Bem-vindo!"}
+    <>
+      <FlatList
+        data={filteredAds}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+        ListHeaderComponent={
+          <>
+            {/* HEADER */}
+            <View style={styles.headerContainer}>
+              <View>
+                <Text style={styles.headerTitle}>
+                  {user ? `Olá, ${user.name}` : "Bem-vindo!"}
+                </Text>
+                <Text style={styles.headerSubtitle}>
+                  Encontre seu imóvel ideal
+                </Text>
+              </View>
+
+              {!user && (
+                <View style={styles.authButtons}>
+                  <TouchableOpacity
+                    style={styles.buttonSecondary}
+                    onPress={() => router.push("/auth/login")}
+                  >
+                    <Text style={styles.buttonSecondaryText}>
+                      Entrar
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.buttonPrimary}
+                    onPress={() => router.push("/auth/register")}
+                  >
+                    <Text style={styles.buttonPrimaryText}>
+                      Criar Conta
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* CTA */}
+            {user && (
+              <TouchableOpacity
+                style={styles.createAdButton}
+                onPress={() => router.push("/create-ad")}
+              >
+                <Text style={styles.createAdText}>
+                  + Criar anúncio
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* SEARCH */}
+            <SearchBar onSearch={setSearch} />
+
+            {/* FILTROS */}
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterVisible(true)}
+            >
+              <Ionicons
+                name="options-outline"
+                size={18}
+                color="#2C6EFA"
+              />
+              <Text style={styles.filterButtonText}>
+                Filtros avançados
               </Text>
-              <Text style={styles.headerSubtitle}>
-                Encontre seu imóvel ideal
+            </TouchableOpacity>
+
+            {/* ORDENAÇÃO */}
+            <View style={styles.orderRow}>
+              <TouchableOpacity
+                style={[
+                  styles.orderButton,
+                  order === "PRICE_ASC" && styles.orderActive,
+                ]}
+                onPress={() => setOrder("PRICE_ASC")}
+              >
+                <Text style={styles.orderText}>
+                  Menor preço
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.orderButton,
+                  order === "PRICE_DESC" && styles.orderActive,
+                ]}
+                onPress={() => setOrder("PRICE_DESC")}
+              >
+                <Text style={styles.orderText}>
+                  Maior preço
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>
+                ✨ Anúncios
               </Text>
             </View>
 
-            {!user && (
-              <View style={styles.authButtons}>
-                <TouchableOpacity
-                  style={styles.buttonSecondary}
-                  onPress={() => router.push("/auth/login")}
-                >
-                  <Text style={styles.buttonSecondaryText}>Entrar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.buttonPrimary}
-                  onPress={() => router.push("/auth/register")}
-                >
-                  <Text style={styles.buttonPrimaryText}>Criar Conta</Text>
-                </TouchableOpacity>
-              </View>
+            {filteredAds.length === 0 && (
+              <Text style={styles.emptyText}>
+                Nenhum anúncio encontrado.
+              </Text>
             )}
-          </View>
-
-          {/* CTA */}
-          {user && (
-            <TouchableOpacity
-              style={styles.createAdButton}
-              onPress={() => router.push("/create-ad")}
-            >
-              <Text style={styles.createAdText}>+ Criar anúncio</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* SEARCH */}
-          <SearchBar onSearch={setSearch} />
-
-          {/* ✅ CATEGORIAS */}
-          <CategorySelector
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
+          </>
+        }
+        renderItem={({ item }) => (
+          <ItemCard
+            id={item.id}
+            title={item.title}
+            price={item.price}
+            location={item.location}
+            image={item.images[0]}
+            beds={item.beds}
+            baths={item.baths}
+            isFeatured={item.isFeatured}
+            onPress={() => router.push(`/item/${item.id}`)}
           />
+        )}
+        ListFooterComponent={<View style={{ height: 20 }} />}
+      />
 
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>✨ Anúncios</Text>
-          </View>
-
-          {filteredAds.length === 0 && (
-            <Text style={styles.emptyText}>
-              Nenhum anúncio encontrado.
-            </Text>
-          )}
-        </>
-      }
-      renderItem={({ item }) => (
-        <ItemCard
-          id={item.id}
-          title={item.title}
-          price={item.price}
-          location={item.location}
-          image={item.images[0]}
-          beds={item.beds}
-          baths={item.baths}
-          isFeatured={item.isFeatured}
-          onPress={() => router.push(`/item/${item.id}`)}
-        />
-      )}
-      ListFooterComponent={<View style={{ height: 20 }} />}
-    />
+      {/* MODAL */}
+      <FilterModal
+        visible={filterVisible}
+        filters={filters}
+        onApply={async (newFilters) => {
+          setFilters(newFilters);
+          await AsyncStorage.setItem(
+            FILTER_STORAGE_KEY,
+            JSON.stringify(newFilters)
+          );
+        }}
+        onClear={clearFilters}
+        onClose={() => setFilterVisible(false)}
+      />
+    </>
   );
 }
+
 
 /* ================== STYLES ================== */
 
@@ -139,7 +277,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: 12,
-    paddingTop: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -147,13 +284,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#333",
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
     color: "#999",
-    fontWeight: "500",
   },
   authButtons: {
     flexDirection: "row",
@@ -161,57 +295,78 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: {
     backgroundColor: "#2C6EFA",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 10,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
   },
   buttonPrimaryText: {
     color: "#FFF",
-    fontSize: 14,
     fontWeight: "700",
   },
   buttonSecondary: {
     borderWidth: 1,
     borderColor: "#2C6EFA",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 10,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
   },
   buttonSecondaryText: {
     color: "#2C6EFA",
-    fontSize: 14,
     fontWeight: "700",
+  },
+  createAdButton: {
+    backgroundColor: "#2C6EFA",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  createAdText: {
+    color: "#FFF",
+    fontWeight: "700",
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  filterButtonText: {
+    color: "#2C6EFA",
+    fontWeight: "700",
+  },
+  orderRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  orderButton: {
+    flex: 1,
+    backgroundColor: "#EEE",
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  orderActive: {
+    backgroundColor: "#2C6EFA",
+  },
+  orderText: {
+    fontWeight: "700",
+    color: "#333",
   },
   sectionContainer: {
     marginTop: 20,
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#333",
   },
   emptyText: {
     textAlign: "center",
     color: "#777",
     marginTop: 20,
-    fontSize: 14,
-  },
-  createAdButton: {
-    backgroundColor: "#2C6EFA",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  createAdText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });
