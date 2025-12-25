@@ -1,5 +1,5 @@
 # Welcome
-# 🏠 App AlugueJá
+# 🏠 App AlugueJá (em refatoração)
 
 Aplicativo de anúncios desenvolvido para facilitar a publicação e busca de imóveis, lanchas e ferramentas, com foco em usabilidade e experiência do usuário.
 
