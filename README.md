@@ -29,7 +29,7 @@ Aplicativo de anúncios desenvolvido para facilitar a publicação e busca de im
 
 ---
 
-## 📸 Screenshots
+
 ## 📸 Screenshots
 
 <div align="center">
