@@ -10,47 +10,74 @@ import {
 } from "react-native";
 
 import { useAuth } from "../../contexts/AuthContext";
-import { useUsers } from "../../contexts/UsersContext";
+import api from "../../services/api";
 
 export default function Register() {
   const router = useRouter();
   const { signIn } = useAuth();
-  const { register, userExists } = useUsers();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    if (!name || !email || !password) {
+  const handleRegister = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!name || !normalizedEmail || !password) {
       Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
       return;
     }
 
-    if (userExists(email)) {
+    try {
+      setLoading(true);
+
+      /* ================== REGISTER ================== */
+      await api.post("/auth/register", {
+        name: name.trim(),
+        email: normalizedEmail,
+        password,
+      });
+
+      /* ================== AUTO LOGIN ================== */
+      const loginResponse = await api.post("/auth/login", {
+        email: normalizedEmail,
+        password,
+      });
+
+      const { user, token } = loginResponse.data;
+
+      if (!user || !token) {
+        throw new Error("Erro ao autenticar após cadastro");
+      }
+
+      await signIn({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token,
+      });
+
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      console.log("ERRO REGISTER:", error);
+
+      if (error?.message === "Network Error") {
+        Alert.alert(
+          "Erro de conexão",
+          "Não foi possível conectar ao servidor. Verifique o IP do backend."
+        );
+        return;
+      }
+
       Alert.alert(
-        "Email já cadastrado",
-        "Este email já está em uso. Faça login."
+        "Erro",
+        error?.response?.data?.error || "Erro ao criar conta"
       );
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const newUser = register({
-      name,
-      email: email.toLowerCase(),
-      password,
-      phone: "55999999999", // depois vira input
-    });
-
-    signIn({
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      role: "USER",
-      phone: newUser.phone,
-    });
-
-    router.replace("/(tabs)");
   };
 
   return (
@@ -85,8 +112,14 @@ export default function Register() {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Criar conta</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Criando..." : "Criar conta"}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>

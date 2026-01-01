@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import {
   Alert,
   FlatList,
@@ -13,8 +14,15 @@ import { useAds } from "../../contexts/AdsContext";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function AdminApprove() {
-  const { ads, approveAd, promoteAd } = useAds();
-  const { user, isAdmin } = useAuth();
+  const {
+    pendingAds,
+    loadPendingAds,
+    approveAd,
+  } = useAds();
+
+  const { isAdmin } = useAuth();
+
+  /* ================== GUARD ================== */
 
   if (!isAdmin) {
     return (
@@ -24,11 +32,19 @@ export default function AdminApprove() {
     );
   }
 
-  const pendingAds = ads.filter(
+  /* ================== LOAD ================== */
+
+  useEffect(() => {
+    loadPendingAds();
+  }, []);
+
+  /* ================== DERIVED LISTS ================== */
+
+  const approvalPendingAds = pendingAds.filter(
     (ad) => ad.status === "PENDING"
   );
 
-  const paymentPendingAds = ads.filter(
+  const paymentPendingAds = pendingAds.filter(
     (ad) => ad.status === "PAYMENT_PENDING"
   );
 
@@ -42,37 +58,20 @@ export default function AdminApprove() {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Aprovar",
-          onPress: () => {
-            approveAd({
-              adId,
-              approvedBy: user.id, // 🔥 pronto para backend
-              approvedAt: new Date().toISOString(),
-            });
-          },
+          onPress: () => approveAd(adId),
         },
       ]
     );
   };
 
-  const confirmPayment = (adId: string) => {
+  const confirmPayment = () => {
     Alert.alert(
-      "Confirmar pagamento",
-      "Deseja confirmar o pagamento e destacar este anúncio?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Confirmar",
-          onPress: () => {
-            promoteAd({
-              adId,
-              confirmedBy: user.id, // 🔥 auditoria futura
-              confirmedAt: new Date().toISOString(),
-            });
-          },
-        },
-      ]
+      "Pagamento",
+      "Fluxo de pagamento ainda não integrado ao backend."
     );
   };
+
+  /* ================== RENDER ================== */
 
   return (
     <View style={styles.container}>
@@ -82,29 +81,23 @@ export default function AdminApprove() {
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={20} color="#F39C12" />
-          <Text style={styles.sectionTitle}>
-            Anúncios pendentes
-          </Text>
+          <Text style={styles.sectionTitle}>Anúncios pendentes</Text>
         </View>
 
-        {pendingAds.length === 0 ? (
+        {approvalPendingAds.length === 0 ? (
           <Text style={styles.empty}>
             Nenhum anúncio aguardando aprovação.
           </Text>
         ) : (
           <FlatList
-            data={pendingAds}
+            data={approvalPendingAds}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <ItemCard
-                  id={item.id}
                   title={item.title}
                   price={item.price}
-                  location={item.location}
-                  image={item.images[0]}
-                  beds={item.beds}
-                  baths={item.baths}
+                  image={item.images?.[0]}
                 />
 
                 <TouchableOpacity
@@ -146,18 +139,14 @@ export default function AdminApprove() {
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <ItemCard
-                  id={item.id}
                   title={item.title}
                   price={item.price}
-                  location={item.location}
-                  image={item.images[0]}
-                  beds={item.beds}
-                  baths={item.baths}
+                  image={item.images?.[0]}
                 />
 
                 <TouchableOpacity
                   style={styles.confirmButton}
-                  onPress={() => confirmPayment(item.id)}
+                  onPress={confirmPayment}
                 >
                   <Ionicons
                     name="star-outline"

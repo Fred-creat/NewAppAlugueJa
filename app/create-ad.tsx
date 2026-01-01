@@ -2,6 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 
 import { Category, useAds } from "../contexts/AdsContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -27,7 +29,7 @@ const CATEGORIES: { label: string; value: Category }[] = [
 
 export default function CreateAd() {
   const router = useRouter();
-  const { addAd } = useAds();
+  const { createAd } = useAds();
   const { user } = useAuth();
 
   const [title, setTitle] = useState("");
@@ -39,13 +41,12 @@ export default function CreateAd() {
   const [contactPhone, setContactPhone] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const isValid =
     title.trim() &&
     price.trim() &&
-    location.trim() &&
     description.trim() &&
-    contactPhone.trim() &&
     category !== null &&
     images.length > 0;
 
@@ -66,7 +67,7 @@ export default function CreateAd() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       selectionLimit: 5 - images.length,
       quality: 0.7,
@@ -83,32 +84,53 @@ export default function CreateAd() {
   };
 
   /* ================== SUBMIT ================== */
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!user || !isValid || !category) {
-      Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos obrigatórios.");
       return;
     }
 
-    addAd({
-      userId: user.id,
-      title,
-      price,
-      location,
-      description,
-      category,
-      beds: Number(beds) || 0,
-      baths: Number(baths) || 0,
-      images,
-      contactPhone,
-    });
+   const parsedPrice = Number(
+  price.replace(",", ".")
+);
 
-    Alert.alert(
-      "Anúncio enviado",
-      "Seu anúncio será analisado antes de ser publicado."
-    );
+if (Number.isNaN(parsedPrice)) {
+  Alert.alert("Preço inválido", "Informe um valor válido.");
+  return;
+}
 
-    router.replace("/profile");
+
+    try {
+      setLoading(true);
+
+      await createAd({
+        userId: user.id,
+        title: title.trim(),
+        description: description.trim(),
+        price: parsedPrice,
+        category,
+        location: location.trim(),
+        beds: beds ? Number(beds) : null,
+        baths: baths ? Number(baths) : null,
+        contactPhone: contactPhone.trim(),
+        images,
+      });
+
+      Alert.alert(
+        "Anúncio enviado",
+        "Seu anúncio será analisado antes de ser publicado."
+      );
+
+      router.replace("/profile");
+    } catch (error) {
+      console.log("CREATE AD ERROR:", error);
+      Alert.alert(
+        "Erro ao criar anúncio",
+        "Não foi possível enviar seu anúncio."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -164,12 +186,16 @@ export default function CreateAd() {
       {/* CAMPOS */}
       <TextInput placeholder="Título" style={styles.input} value={title} onChangeText={setTitle} />
       <TextInput placeholder="Preço" keyboardType="numeric" style={styles.input} value={price} onChangeText={setPrice} />
-      <TextInput placeholder="Localização" style={styles.input} value={location} onChangeText={setLocation} />
-      <TextInput placeholder="Quartos" keyboardType="numeric" style={styles.input} value={beds} onChangeText={setBeds} />
-      <TextInput placeholder="Banheiros" keyboardType="numeric" style={styles.input} value={baths} onChangeText={setBaths} />
+      <TextInput placeholder="Descrição" multiline style={[styles.input, { height: 100 }]} value={description} onChangeText={setDescription} />
+      <TextInput
+        placeholder="Localização"
+        style={styles.input}
+        value={location}
+        onChangeText={setLocation}
+      />
 
       <TextInput
-        placeholder="Telefone / WhatsApp"
+        placeholder="Telefone para contato"
         keyboardType="phone-pad"
         style={styles.input}
         value={contactPhone}
@@ -177,19 +203,31 @@ export default function CreateAd() {
       />
 
       <TextInput
-        placeholder="Descrição"
-        multiline
-        style={[styles.input, { height: 100 }]}
-        value={description}
-        onChangeText={setDescription}
+        placeholder="Quartos (opcional)"
+        keyboardType="numeric"
+        style={styles.input}
+        value={beds}
+        onChangeText={setBeds}
+      />
+
+      <TextInput
+        placeholder="Banheiros (opcional)"
+        keyboardType="numeric"
+        style={styles.input}
+        value={baths}
+        onChangeText={setBaths}
       />
 
       <TouchableOpacity
-        style={[styles.button, !isValid && styles.buttonDisabled]}
+        style={[styles.button, (!isValid || loading) && styles.buttonDisabled]}
         onPress={handleSubmit}
-        disabled={!isValid}
+        disabled={!isValid || loading}
       >
-        <Text style={styles.buttonText}>Publicar anúncio</Text>
+        {loading ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.buttonText}>Publicar anúncio</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );

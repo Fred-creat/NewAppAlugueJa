@@ -1,10 +1,11 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   useContext,
   useEffect,
   useState,
 } from "react";
+
+import api from "../services/api";
 
 /* ================== TYPES ================== */
 
@@ -13,7 +14,6 @@ export type AdStatus =
   | "APPROVED"
   | "PAYMENT_PENDING";
 
-/* ✅ CATEGORIAS SUPORTADAS */
 export type Category =
   | "CASAS"
   | "APARTAMENTOS"
@@ -29,12 +29,12 @@ export type Ad = {
 
   title: string;
   description: string;
-  price: string;
+  price: number;
   location: string;
   category: Category;
 
-  beds: number;
-  baths: number;
+  beds: number | null;
+  baths: number | null;
   images: string[];
   contactPhone: string;
 
@@ -44,25 +44,31 @@ export type Ad = {
   createdAt: number;
 };
 
-/* 🔐 Payload de criação */
 type NewAd = {
-  userId: string;
   title: string;
   description: string;
-  price: string;
+  price: number;
   location: string;
   category: Category;
 
-  beds: number;
-  baths: number;
+  beds: number | null;
+  baths: number | null;
   images: string[];
   contactPhone: string;
 };
 
 type AdsContextData = {
   ads: Ad[];
-  addAd: (ad: NewAd) => void;
-  approveAd: (adId: string) => void;
+  myAds: Ad[];
+  pendingAds: Ad[];
+
+  loadPublicAds: () => Promise<void>;
+  loadMyAds: () => Promise<void>;
+  loadPendingAds: () => Promise<void>;
+
+  createAd: (ad: NewAd) => Promise<void>;
+  approveAd: (adId: string) => Promise<void>;
+
   requestPromotion: (adId: string) => void;
   promoteAd: (adId: string) => void;
 };
@@ -77,105 +83,147 @@ const AdsContext = createContext<AdsContextData>(
 
 export function AdsProvider({ children }: { children: React.ReactNode }) {
   const [ads, setAds] = useState<Ad[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [myAds, setMyAds] = useState<Ad[]>([]);
+  const [pendingAds, setPendingAds] = useState<Ad[]>([]);
 
-  const STORAGE_KEY = "@alugueja:ads";
+  /* ================== MAPPER ================== */
 
-  /* 🔄 Load + MIGRAÇÃO */
-  useEffect(() => {
-    async function loadAds() {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+  function mapAds(data: any[]): Ad[] {
+    return data.map((item) => ({
+      id: item.id,
+      userId: item.ownerId,
 
-        if (stored) {
-          const parsed: Ad[] = JSON.parse(stored);
+      title: item.title,
+      description: item.description,
+      price: item.price,
+      location: item.location || "Indefinido",
+      category: item.category as Category,
 
-          // 🔁 Migração: anúncios antigos sem categoria
-          const migrated = parsed.map((ad) => ({
-            ...ad,
-            category: ad.category ?? "CASA",
-          }));
+      beds: item.beds ?? null,
+      baths: item.baths ?? null,
+      images: item.images?.length
+        ? item.images
+        : ["https://via.placeholder.com/400"],
 
-          setAds(migrated);
-        }
-      } catch (e) {
-        console.log("Erro ao carregar anúncios", e);
-      } finally {
-        setLoaded(true);
-      }
+      contactPhone: item.contactPhone || "Não informado",
+
+      status: item.status,
+      isFeatured: item.isFeatured,
+
+      createdAt: new Date(item.createdAt).getTime(),
+    }));
+  }
+
+  /* ================== LOADERS ================== */
+
+  async function loadPublicAds() {
+    try {
+      const res = await api.get("/properties");
+      setAds(mapAds(res.data));
+    } catch (error) {
+      console.log("Erro ao carregar anúncios públicos");
     }
+  }
 
-    loadAds();
+  async function loadMyAds() {
+    try {
+      const res = await api.get("/properties/me");
+      setMyAds(mapAds(res.data));
+    } catch (error) {
+      // ❗ NÃO quebrar app se usuário não estiver logado ainda
+      console.log("Usuário sem anúncios ou não autenticado");
+      setMyAds([]);
+    }
+  }
+async function loadPendingAds() {
+  try {
+    const res = await api.get("/properties/admin/pending");
+    setPendingAds(mapAds(res.data));
+  } catch (error) {
+    console.log("Sem acesso a anúncios pendentes");
+    setPendingAds([]);
+  }
+}
+
+
+  /* ================== EFFECT ================== */
+
+  // 🔹 SOMENTE anúncios públicos carregam automaticamente
+  useEffect(() => {
+    loadPublicAds();
   }, []);
 
-  /* 💾 Persist */
-  useEffect(() => {
-    if (loaded) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ads));
+  /* ================== ACTIONS ================== */
+
+  async function createAd(ad: NewAd) {
+    try {
+      await api.post("/properties", {
+        title: ad.title,
+        description: ad.description,
+        price: ad.price,
+        location: ad.location,
+        category: ad.category,
+        beds: ad.beds,
+        baths: ad.baths,
+        contactPhone: ad.contactPhone,
+        images: ad.images,
+      });
+
+      await loadMyAds();
+    } catch (error) {
+      console.log("Erro ao criar anúncio");
+      throw error;
     }
-  }, [ads, loaded]);
+  }
 
-  /* ➕ Criar anúncio */
-  const addAd = (adData: NewAd) => {
-    const newAd: Ad = {
-      id: Date.now().toString(),
-      userId: adData.userId,
+  async function approveAd(adId: string) {
+    try {
+      await api.patch(`/properties/admin/${adId}/approve`);
 
-      title: adData.title,
-      description: adData.description,
-      price: adData.price,
-      location: adData.location,
-      category: adData.category,
+      await Promise.all([
+        loadPendingAds(),
+        loadPublicAds(),
+        loadMyAds(),
+      ]);
+    } catch (error) {
+      console.log("Erro ao aprovar anúncio");
+    }
+  }
 
-      beds: adData.beds,
-      baths: adData.baths,
-      images: adData.images,
-      contactPhone: adData.contactPhone,
+  /* ================== PROMOÇÃO (LOCAL) ================== */
 
-      status: "PENDING",
-      isFeatured: false,
-      createdAt: Date.now(),
-    };
-
-    setAds((prev) => [newAd, ...prev]);
-  };
-
-  /* ✅ Admin aprova */
-  const approveAd = (adId: string) => {
-    setAds((prev) =>
-      prev.map((ad) =>
-        ad.id === adId ? { ...ad, status: "APPROVED" } : ad
-      )
-    );
-  };
-
-  /* 💳 Solicita destaque */
-  const requestPromotion = (adId: string) => {
-    setAds((prev) =>
+  function requestPromotion(adId: string) {
+    setMyAds((prev) =>
       prev.map((ad) =>
         ad.id === adId && ad.status === "APPROVED"
           ? { ...ad, status: "PAYMENT_PENDING" }
           : ad
       )
     );
-  };
+  }
 
-  /* ⭐ Confirma pagamento */
-  const promoteAd = (adId: string) => {
-    setAds((prev) =>
+  function promoteAd(adId: string) {
+    setMyAds((prev) =>
       prev.map((ad) =>
         ad.id === adId && ad.status === "PAYMENT_PENDING"
           ? { ...ad, isFeatured: true, status: "APPROVED" }
           : ad
       )
     );
-  };
+  }
+
+  /* ================== PROVIDER ================== */
 
   return (
     <AdsContext.Provider
       value={{
         ads,
-        addAd,
+        myAds,
+        pendingAds,
+        loadPublicAds,
+        loadMyAds,
+        loadPendingAds,
+        createAd,
         approveAd,
         requestPromotion,
         promoteAd,

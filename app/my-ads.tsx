@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -7,14 +8,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import ItemCard from "../components/ui/ItemCard";
 import { useAds } from "../contexts/AdsContext";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function MyAds() {
-  const { ads } = useAds();
-  const { user } = useAuth();
+  const { myAds, loadMyAds } = useAds();
+  const { user, loading } = useAuth();
   const router = useRouter();
+
+  /* ================== EFFECT ================== */
+
+  useEffect(() => {
+    if (user?.id) {
+      loadMyAds();
+    }
+  }, [user?.id]);
+
+  /* ================== STATES ================== */
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <Text>Carregando...</Text>
+      </View>
+    );
+  }
 
   if (!user) {
     return (
@@ -23,8 +43,6 @@ export default function MyAds() {
       </View>
     );
   }
-
-  const myAds = ads.filter((ad) => ad.userId === user.id);
 
   if (myAds.length === 0) {
     return (
@@ -38,7 +56,9 @@ export default function MyAds() {
     );
   }
 
-  const renderStatus = (item: any) => {
+  /* ================== HELPERS ================== */
+
+  function renderStatus(item: any) {
     if (item.isFeatured) {
       return (
         <View style={[styles.badge, styles.featured]}>
@@ -68,7 +88,9 @@ export default function MyAds() {
         <Text style={styles.badgeText}>✅ Publicado</Text>
       </View>
     );
-  };
+  }
+
+  /* ================== RENDER ================== */
 
   return (
     <View style={styles.container}>
@@ -84,7 +106,7 @@ export default function MyAds() {
               title={item.title}
               price={item.price}
               location={item.location}
-              image={item.images[0]}
+              image={item.images?.[0]}
               beds={item.beds}
               baths={item.baths}
               isFeatured={item.isFeatured}

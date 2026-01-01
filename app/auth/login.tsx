@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -9,10 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../contexts/AuthContext";
 
-const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD;
+
+import { useAuth } from "../../contexts/AuthContext";
+import api from "../../services/api";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -20,48 +19,57 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       Alert.alert("Erro", "Preencha email e senha");
       return;
     }
 
-    /* ================= ADMIN ================= */
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      signIn({
-        id: "admin",
-        name: "Administrador",
-        email,
-        role: "ADMIN",
+    try {
+      setLoading(true);
+
+      const response = await api.post("/auth/login", {
+        email: normalizedEmail,
+        password,
+      });
+
+      const { user, token } = response.data;
+
+      if (!user || !token) {
+        throw new Error("Resposta inválida do servidor");
+      }
+
+      await signIn({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token,
       });
 
       router.replace("/(tabs)");
-      return;
+    } catch (error: any) {
+      console.log("ERRO LOGIN:", error);
+
+      if (error?.message === "Network Error") {
+        Alert.alert(
+          "Erro de conexão",
+          "Não foi possível conectar ao servidor. Verifique o IP e a rede."
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Erro",
+        error?.response?.data?.error || "Email ou senha inválidos"
+      );
+    } finally {
+      setLoading(false);
     }
-
-    /* ================= USUÁRIO ================= */
-    const storedUsers = await AsyncStorage.getItem("@alugueja:users");
-    const users = storedUsers ? JSON.parse(storedUsers) : [];
-
-    const user = users.find(
-      (u: any) => u.email === email && u.password === password
-    );
-
-    if (!user) {
-      Alert.alert("Erro", "Email ou senha inválidos");
-      return;
-    }
-
-    signIn({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: "USER",
-      phone: user.phone,
-    });
-
-    router.replace("/(tabs)");
   };
 
   return (
@@ -76,6 +84,7 @@ export default function Login() {
           onChangeText={setEmail}
           style={styles.input}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
 
         <TextInput
@@ -86,8 +95,14 @@ export default function Login() {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Entrar</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Entrando..." : "Entrar"}
+          </Text>
         </TouchableOpacity>
 
         <Link href="/auth/forgot" style={styles.link}>
@@ -104,6 +119,7 @@ export default function Login() {
     </View>
   );
 }
+
 
 /* ================== STYLES ================== */
 

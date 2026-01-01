@@ -1,20 +1,27 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { setAuthToken } from "../services/api";
 
 /* ================== TYPES ================== */
 
 export type User = {
   id: string;
   name: string;
+  email: string;
   role: "USER" | "ADMIN";
-  phone?: string;
+  token?: string;
 };
 
 type AuthContextData = {
   user: User | null;
   isAdmin: boolean;
   loading: boolean;
-  signIn: (user: User) => Promise<void>;
+  signIn: (userData: User) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -28,46 +35,58 @@ const AuthContext = createContext<AuthContextData>(
 
 /* ================== PROVIDER ================== */
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === "ADMIN";
 
-  /* 🔄 Carregar usuário salvo */
   useEffect(() => {
     loadUser();
   }, []);
 
   const loadUser = async () => {
     try {
-      const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+
+      if (stored) {
+        const parsed: User = JSON.parse(stored);
+
+        if (parsed?.id && parsed?.role && parsed?.token) {
+          setUser(parsed);
+          setAuthToken(parsed.token); // 🔥 AQUI
+        } else {
+          await AsyncStorage.removeItem(STORAGE_KEY);
+        }
       }
     } catch (error) {
       console.log("Erro ao carregar usuário:", error);
+      await AsyncStorage.removeItem(STORAGE_KEY);
     } finally {
       setLoading(false);
     }
   };
 
-  /* 🔐 Login */
   const signIn = async (userData: User) => {
-    setUser(userData);
+    const normalizedUser: User = {
+      id: String(userData.id),
+      name: userData.name,
+      email: userData.email,
+      role: userData.role ?? "USER",
+      token: userData.token,
+    };
+
+    setUser(normalizedUser);
+    setAuthToken(normalizedUser.token); // 🔥 AQUI
     await AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(userData)
+      JSON.stringify(normalizedUser)
     );
   };
 
-  /* 🚪 Logout */
   const signOut = async () => {
     setUser(null);
+    setAuthToken(undefined); // 🔥 AQUI
     await AsyncStorage.removeItem(STORAGE_KEY);
   };
 
@@ -85,8 +104,6 @@ export function AuthProvider({
     </AuthContext.Provider>
   );
 }
-
-/* ================== HOOK ================== */
 
 export function useAuth() {
   return useContext(AuthContext);
