@@ -18,11 +18,16 @@ export default function AdminApprove() {
     pendingAds,
     loadPendingAds,
     approveAd,
+    confirmPayment,
   } = useAds();
 
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading } = useAuth();
 
   /* ================== GUARD ================== */
+
+  if (loading) {
+    return null;
+  }
 
   if (!isAdmin) {
     return (
@@ -50,7 +55,7 @@ export default function AdminApprove() {
 
   /* ================== AÇÕES ADMIN ================== */
 
-  const confirmApprove = (adId: string) => {
+  const handleApprove = (adId: string) => {
     Alert.alert(
       "Aprovar anúncio",
       "Deseja aprovar este anúncio e publicá-lo?",
@@ -64,10 +69,17 @@ export default function AdminApprove() {
     );
   };
 
-  const confirmPayment = () => {
+  const handleConfirmPayment = (adId: string) => {
     Alert.alert(
-      "Pagamento",
-      "Fluxo de pagamento ainda não integrado ao backend."
+      "Confirmar pagamento",
+      "Confirmar pagamento e ativar destaque?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Confirmar",
+          onPress: () => confirmPayment(adId),
+        },
+      ]
     );
   };
 
@@ -81,7 +93,9 @@ export default function AdminApprove() {
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={20} color="#F39C12" />
-          <Text style={styles.sectionTitle}>Anúncios pendentes</Text>
+          <Text style={styles.sectionTitle}>
+            Anúncios pendentes
+          </Text>
         </View>
 
         {approvalPendingAds.length === 0 ? (
@@ -102,7 +116,7 @@ export default function AdminApprove() {
 
                 <TouchableOpacity
                   style={styles.approveButton}
-                  onPress={() => confirmApprove(item.id)}
+                  onPress={() => handleApprove(item.id)}
                 >
                   <Ionicons
                     name="checkmark-circle-outline"
@@ -146,7 +160,9 @@ export default function AdminApprove() {
 
                 <TouchableOpacity
                   style={styles.confirmButton}
-                  onPress={confirmPayment}
+                  onPress={() =>
+                    handleConfirmPayment(item.id)
+                  }
                 >
                   <Ionicons
                     name="star-outline"

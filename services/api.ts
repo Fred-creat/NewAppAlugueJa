@@ -1,18 +1,35 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { Platform } from "react-native";
 
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL !== ""
-    ? process.env.EXPO_PUBLIC_API_URL
-    : "http://192.168.0.105:3333";
+/* ================== STORAGE CROSS-PLATFORM ================== */
+export const storage = {
+  async get(key: string) {
+    if (Platform.OS === "web") {
+      return localStorage.getItem(key);
+    }
+    const AsyncStorage =
+      require("@react-native-async-storage/async-storage").default;
+    return AsyncStorage.getItem(key);
+  },
+};
+
+/* ================== API URL ================== */
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error(
+    "EXPO_PUBLIC_API_URL não definida. Verifique o arquivo .env"
+  );
+}
+
+console.log("API_URL:", API_URL);
 
 const api = axios.create({
-  
   baseURL: API_URL,
   timeout: 10000,
 });
 
-/* 🔐 Helper para setar/remover token */
+/* ================== TOKEN HELPER ================== */
 export function setAuthToken(token?: string) {
   if (token) {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -21,10 +38,16 @@ export function setAuthToken(token?: string) {
   }
 }
 
-/* 🔄 Interceptor */
+/* ================== INTERCEPTOR (CORRIGIDO) ================== */
 api.interceptors.request.use(async (config) => {
+  // 🔒 NÃO enviar token em rotas públicas
+  if (config.url?.includes("/auth/login")) {
+    return config;
+  }
+
   if (!config.headers.Authorization) {
-    const storedUser = await AsyncStorage.getItem("@alugueja:user");
+    const storedUser = await storage.get("@alugueja:user");
+
     if (storedUser) {
       const user = JSON.parse(storedUser);
       if (user?.token) {
@@ -32,6 +55,7 @@ api.interceptors.request.use(async (config) => {
       }
     }
   }
+
   return config;
 });
 

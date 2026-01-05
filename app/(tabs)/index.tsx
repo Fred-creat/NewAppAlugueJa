@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 
-
 import FilterModal, {
   FilterValues,
 } from "../../components/ui/FilterModal";
@@ -24,12 +23,20 @@ type OrderType = "DEFAULT" | "PRICE_ASC" | "PRICE_DESC";
 
 const FILTER_STORAGE_KEY = "@alugueja:filters";
 
+/* ================== MAPA SEMÂNTICO ================== */
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  LANCHA: ["lancha", "barco", "jet", "iate", "embarcação"],
+  CASA: ["casa", "imóvel", "residência"],
+  APARTAMENTO: ["apartamento", "apto", "flat"],
+  TERRENO: ["terreno", "lote"],
+};
+
 /* ================== ESTADO BASE ================== */
 const DEFAULT_FILTERS: FilterValues = {
   category: "ALL",
   minPrice: null,
   maxPrice: null,
-  location: ""
+  location: "",
 };
 
 export default function Index() {
@@ -37,18 +44,18 @@ export default function Index() {
   const { ads } = useAds();
   const router = useRouter();
 
-  /* ================== FILTROS ================== */
   const [filters, setFilters] =
     useState<FilterValues>(DEFAULT_FILTERS);
-
   const [search, setSearch] = useState("");
   const [order, setOrder] = useState<OrderType>("DEFAULT");
   const [filterVisible, setFilterVisible] = useState(false);
 
-  /* ================== LOAD FILTROS SALVOS ================== */
+  /* ================== LOAD FILTROS ================== */
   useEffect(() => {
     async function loadFilters() {
-      const stored = await AsyncStorage.getItem(FILTER_STORAGE_KEY);
+      const stored = await AsyncStorage.getItem(
+        FILTER_STORAGE_KEY
+      );
       if (stored) {
         setFilters(JSON.parse(stored));
       }
@@ -58,44 +65,57 @@ export default function Index() {
 
   /* ================== FILTRAGEM ================== */
   const filteredAds = useMemo(() => {
-    let result = ads.filter((ad) => ad.status === "APPROVED");
+    let result = ads.filter(
+      (ad) => ad.status === "APPROVED"
+    );
 
-    // Categoria
+    /* ===== CATEGORIA INTELIGENTE ===== */
     if (filters.category !== "ALL") {
-      result = result.filter(
-        (ad) => ad.category === filters.category
-      );
+      const keywords =
+        CATEGORY_KEYWORDS[filters.category] || [];
+
+      result = result.filter((ad) => {
+        if (ad.category === filters.category) return true;
+
+        const title = ad.title.toLowerCase();
+        return keywords.some((k) =>
+          title.includes(k)
+        );
+      });
     }
 
-    // Busca
+    /* ===== BUSCA GLOBAL ===== */
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (ad) =>
-          ad.title.toLowerCase().includes(q) ||
-          ad.location.toLowerCase().includes(q)
-      );
+
+      result = result.filter((ad) => {
+        const text =
+          `${ad.title} ${ad.location}`.toLowerCase();
+        return text.includes(q);
+      });
     }
 
-    // Preço mínimo
+    /* ===== PREÇO ===== */
     if (filters.minPrice !== null) {
       result = result.filter(
         (ad) => Number(ad.price) >= filters.minPrice!
       );
     }
 
-    // Preço máximo
     if (filters.maxPrice !== null) {
       result = result.filter(
         (ad) => Number(ad.price) <= filters.maxPrice!
       );
     }
 
-    // Destaques
-    const featured = result.filter((ad) => ad.isFeatured);
-    let normal = result.filter((ad) => !ad.isFeatured);
+    /* ===== DESTAQUES + ORDENAÇÃO ===== */
+    const featured = result.filter(
+      (ad) => ad.isFeatured
+    );
+    let normal = result.filter(
+      (ad) => !ad.isFeatured
+    );
 
-    // Ordenação
     if (order === "PRICE_ASC") {
       normal = [...normal].sort(
         (a, b) => Number(a.price) - Number(b.price)
@@ -109,14 +129,13 @@ export default function Index() {
     }
 
     return [...featured, ...normal];
-  }, [ads, search, filters, order]);
+  }, [ads, filters, search, order]);
 
-  /* ================== LIMPAR FILTROS (TOTAL) ================== */
+  /* ================== LIMPAR ================== */
   const clearFilters = async () => {
     setFilters(DEFAULT_FILTERS);
     setSearch("");
     setOrder("DEFAULT");
-
     await AsyncStorage.removeItem(FILTER_STORAGE_KEY);
   };
 
@@ -133,7 +152,9 @@ export default function Index() {
             <View style={styles.headerContainer}>
               <View>
                 <Text style={styles.headerTitle}>
-                  {user ? `Olá, ${user.name}` : "Bem-vindo!"}
+                  {user
+                    ? `Olá, ${user.name}`
+                    : "Bem-vindo!"}
                 </Text>
                 <Text style={styles.headerSubtitle}>
                   Encontre seu imóvel ideal
@@ -144,18 +165,26 @@ export default function Index() {
                 <View style={styles.authButtons}>
                   <TouchableOpacity
                     style={styles.buttonSecondary}
-                    onPress={() => router.push("/auth/login")}
+                    onPress={() =>
+                      router.push("/auth/login")
+                    }
                   >
-                    <Text style={styles.buttonSecondaryText}>
+                    <Text
+                      style={styles.buttonSecondaryText}
+                    >
                       Entrar
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.buttonPrimary}
-                    onPress={() => router.push("/auth/register")}
+                    onPress={() =>
+                      router.push("/auth/register")
+                    }
                   >
-                    <Text style={styles.buttonPrimaryText}>
+                    <Text
+                      style={styles.buttonPrimaryText}
+                    >
                       Criar Conta
                     </Text>
                   </TouchableOpacity>
@@ -167,7 +196,9 @@ export default function Index() {
             {user && (
               <TouchableOpacity
                 style={styles.createAdButton}
-                onPress={() => router.push("/create-ad")}
+                onPress={() =>
+                  router.push("/create-ad")
+                }
               >
                 <Text style={styles.createAdText}>
                   + Criar anúncio
@@ -198,9 +229,12 @@ export default function Index() {
               <TouchableOpacity
                 style={[
                   styles.orderButton,
-                  order === "PRICE_ASC" && styles.orderActive,
+                  order === "PRICE_ASC" &&
+                    styles.orderActive,
                 ]}
-                onPress={() => setOrder("PRICE_ASC")}
+                onPress={() =>
+                  setOrder("PRICE_ASC")
+                }
               >
                 <Text style={styles.orderText}>
                   Menor preço
@@ -210,9 +244,12 @@ export default function Index() {
               <TouchableOpacity
                 style={[
                   styles.orderButton,
-                  order === "PRICE_DESC" && styles.orderActive,
+                  order === "PRICE_DESC" &&
+                    styles.orderActive,
                 ]}
-                onPress={() => setOrder("PRICE_DESC")}
+                onPress={() =>
+                  setOrder("PRICE_DESC")
+                }
               >
                 <Text style={styles.orderText}>
                   Maior preço
@@ -243,13 +280,14 @@ export default function Index() {
             beds={item.beds}
             baths={item.baths}
             isFeatured={item.isFeatured}
-            onPress={() => router.push(`/item/${item.id}`)}
+            onPress={() =>
+              router.push(`/item/${item.id}`)
+            }
           />
         )}
         ListFooterComponent={<View style={{ height: 20 }} />}
       />
 
-      {/* MODAL */}
       <FilterModal
         visible={filterVisible}
         filters={filters}
@@ -266,7 +304,6 @@ export default function Index() {
     </>
   );
 }
-
 
 /* ================== STYLES ================== */
 
