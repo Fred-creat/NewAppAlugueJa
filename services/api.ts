@@ -22,7 +22,7 @@ if (!API_URL) {
   );
 }
 
-console.log("API_URL:", API_URL);
+console.log("API_URL EM USO:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,

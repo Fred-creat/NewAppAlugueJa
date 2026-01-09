@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useState,
 } from "react";
 import api from "../services/api";
@@ -12,7 +11,7 @@ export type AdStatus =
   | "PENDING"
   | "APPROVED"
   | "PAYMENT_PENDING"
-  | "REJECTED"; // ✅ prevenção futura
+  | "REJECTED";
 
 export type Category =
   | "CASAS"
@@ -62,13 +61,17 @@ type AdsContextData = {
   myAds: Ad[];
   pendingAds: Ad[];
 
+  loading: boolean;
+  error: string | null;
+
   loadPublicAds: () => Promise<void>;
   loadMyAds: () => Promise<void>;
   loadPendingAds: () => Promise<void>;
 
+  resetAds: () => void;
+
   createAd: (ad: NewAd) => Promise<void>;
   approveAd: (adId: string) => Promise<void>;
-
   requestPromotion: (adId: string) => Promise<void>;
   confirmPayment: (adId: string) => Promise<void>;
 };
@@ -89,6 +92,9 @@ export function AdsProvider({
   const [ads, setAds] = useState<Ad[]>([]);
   const [myAds, setMyAds] = useState<Ad[]>([]);
   const [pendingAds, setPendingAds] = useState<Ad[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /* ================== MAPPER ================== */
 
@@ -123,79 +129,133 @@ export function AdsProvider({
   /* ================== LOADERS ================== */
 
   async function loadPublicAds() {
+    setLoading(true);
+    setError(null);
+
     try {
       const res = await api.get("/properties");
       setAds(mapAds(res.data));
     } catch {
       setAds([]);
+      setError("Erro ao carregar anúncios públicos");
+    } finally {
+      setLoading(false);
     }
   }
 
   async function loadMyAds() {
+    setLoading(true);
+    setError(null);
+
     try {
       const res = await api.get("/properties/me");
       setMyAds(mapAds(res.data));
     } catch {
       setMyAds([]);
+      setError("Erro ao carregar meus anúncios");
+    } finally {
+      setLoading(false);
     }
   }
 
   async function loadPendingAds() {
+    setLoading(true);
+    setError(null);
+
     try {
       const res = await api.get("/properties/admin/pending");
       setPendingAds(mapAds(res.data));
     } catch {
       setPendingAds([]);
+      setError("Erro ao carregar anúncios pendentes");
+    } finally {
+      setLoading(false);
     }
   }
-
-  /* ================== EFFECT ================== */
-
-  useEffect(() => {
-    loadPublicAds();
-  }, []);
 
   /* ================== ACTIONS ================== */
 
   async function createAd(ad: NewAd) {
-    await api.post("/properties", ad);
-    await loadMyAds();
+    setLoading(true);
+    setError(null);
+
+    try {
+      await api.post("/properties", ad);
+      await loadMyAds();
+    } catch {
+      setError("Erro ao criar anúncio");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function approveAd(adId: string) {
-    await api.patch(`/properties/admin/${adId}/approve`);
+    setLoading(true);
+    setError(null);
 
-    await Promise.all([
-      loadPendingAds(),
-      loadPublicAds(),
-      loadMyAds(),
-    ]);
+    try {
+      await api.patch(`/properties/admin/${adId}/approve`);
+
+      await Promise.all([
+        loadPendingAds(),
+        loadPublicAds(),
+        loadMyAds(),
+      ]);
+    } catch {
+      setError("Erro ao aprovar anúncio");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  /* ================== PROMOÇÃO (FIX REAL) ================== */
-
   async function requestPromotion(adId: string) {
-    // ✅ ROTA CORRETA DO BACKEND
-    await api.patch(
-      `/properties/${adId}/request-promotion`
-    );
+    setLoading(true);
+    setError(null);
 
-    await Promise.all([
-      loadMyAds(),
-      loadPendingAds(),
-    ]);
+    try {
+      await api.patch(
+        `/properties/${adId}/request-promotion`
+      );
+
+      await Promise.all([
+        loadMyAds(),
+        loadPendingAds(),
+      ]);
+    } catch {
+      setError("Erro ao solicitar destaque");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function confirmPayment(adId: string) {
-    await api.patch(
-      `/properties/admin/${adId}/confirm-payment`
-    );
+    setLoading(true);
+    setError(null);
 
-    await Promise.all([
-      loadPendingAds(),
-      loadPublicAds(),
-      loadMyAds(),
-    ]);
+    try {
+      await api.patch(
+        `/properties/admin/${adId}/confirm-payment`
+      );
+
+      await Promise.all([
+        loadPendingAds(),
+        loadPublicAds(),
+        loadMyAds(),
+      ]);
+    } catch {
+      setError("Erro ao confirmar pagamento");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ================== RESET (LOGOUT) ================== */
+
+  function resetAds() {
+    setAds([]);
+    setMyAds([]);
+    setPendingAds([]);
+    setError(null);
   }
 
   /* ================== PROVIDER ================== */
@@ -206,9 +266,12 @@ export function AdsProvider({
         ads,
         myAds,
         pendingAds,
+        loading,
+        error,
         loadPublicAds,
         loadMyAds,
         loadPendingAds,
+        resetAds,
         createAd,
         approveAd,
         requestPromotion,

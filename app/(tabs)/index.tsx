@@ -1,8 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
+  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -41,14 +47,21 @@ const DEFAULT_FILTERS: FilterValues = {
 
 export default function Index() {
   const { user } = useAuth();
-  const { ads } = useAds();
+  const {
+    ads,
+    loading,
+    error,
+    loadPublicAds,
+  } = useAds();
+
   const router = useRouter();
 
   const [filters, setFilters] =
     useState<FilterValues>(DEFAULT_FILTERS);
   const [search, setSearch] = useState("");
   const [order, setOrder] = useState<OrderType>("DEFAULT");
-  const [filterVisible, setFilterVisible] = useState(false);
+  const [filterVisible, setFilterVisible] =
+    useState(false);
 
   /* ================== LOAD FILTROS ================== */
   useEffect(() => {
@@ -63,19 +76,26 @@ export default function Index() {
     loadFilters();
   }, []);
 
+  /* ================== LOAD ADS (FOCUS SAFE) ================== */
+  useFocusEffect(
+    useCallback(() => {
+      loadPublicAds();
+    }, [])
+  );
+
   /* ================== FILTRAGEM ================== */
   const filteredAds = useMemo(() => {
     let result = ads.filter(
       (ad) => ad.status === "APPROVED"
     );
 
-    /* ===== CATEGORIA INTELIGENTE ===== */
     if (filters.category !== "ALL") {
       const keywords =
         CATEGORY_KEYWORDS[filters.category] || [];
 
       result = result.filter((ad) => {
-        if (ad.category === filters.category) return true;
+        if (ad.category === filters.category)
+          return true;
 
         const title = ad.title.toLowerCase();
         return keywords.some((k) =>
@@ -84,31 +104,27 @@ export default function Index() {
       });
     }
 
-    /* ===== BUSCA GLOBAL ===== */
     if (search.trim()) {
       const q = search.toLowerCase();
-
-      result = result.filter((ad) => {
-        const text =
-          `${ad.title} ${ad.location}`.toLowerCase();
-        return text.includes(q);
-      });
+      result = result.filter((ad) =>
+        `${ad.title} ${ad.location}`
+          .toLowerCase()
+          .includes(q)
+      );
     }
 
-    /* ===== PREÇO ===== */
     if (filters.minPrice !== null) {
       result = result.filter(
-        (ad) => Number(ad.price) >= filters.minPrice!
+        (ad) => ad.price >= filters.minPrice!
       );
     }
 
     if (filters.maxPrice !== null) {
       result = result.filter(
-        (ad) => Number(ad.price) <= filters.maxPrice!
+        (ad) => ad.price <= filters.maxPrice!
       );
     }
 
-    /* ===== DESTAQUES + ORDENAÇÃO ===== */
     const featured = result.filter(
       (ad) => ad.isFeatured
     );
@@ -118,13 +134,13 @@ export default function Index() {
 
     if (order === "PRICE_ASC") {
       normal = [...normal].sort(
-        (a, b) => Number(a.price) - Number(b.price)
+        (a, b) => a.price - b.price
       );
     }
 
     if (order === "PRICE_DESC") {
       normal = [...normal].sort(
-        (a, b) => Number(b.price) - Number(a.price)
+        (a, b) => b.price - a.price
       );
     }
 
@@ -138,6 +154,23 @@ export default function Index() {
     setOrder("DEFAULT");
     await AsyncStorage.removeItem(FILTER_STORAGE_KEY);
   };
+
+  /* ================== LOADING / ERROR ================== */
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2C6EFA" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -192,7 +225,6 @@ export default function Index() {
               )}
             </View>
 
-            {/* CTA */}
             {user && (
               <TouchableOpacity
                 style={styles.createAdButton}
@@ -206,10 +238,8 @@ export default function Index() {
               </TouchableOpacity>
             )}
 
-            {/* SEARCH */}
             <SearchBar onSearch={setSearch} />
 
-            {/* FILTROS */}
             <TouchableOpacity
               style={styles.filterButton}
               onPress={() => setFilterVisible(true)}
@@ -223,39 +253,6 @@ export default function Index() {
                 Filtros avançados
               </Text>
             </TouchableOpacity>
-
-            {/* ORDENAÇÃO */}
-            <View style={styles.orderRow}>
-              <TouchableOpacity
-                style={[
-                  styles.orderButton,
-                  order === "PRICE_ASC" &&
-                    styles.orderActive,
-                ]}
-                onPress={() =>
-                  setOrder("PRICE_ASC")
-                }
-              >
-                <Text style={styles.orderText}>
-                  Menor preço
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.orderButton,
-                  order === "PRICE_DESC" &&
-                    styles.orderActive,
-                ]}
-                onPress={() =>
-                  setOrder("PRICE_DESC")
-                }
-              >
-                <Text style={styles.orderText}>
-                  Maior preço
-                </Text>
-              </TouchableOpacity>
-            </View>
 
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>
@@ -285,7 +282,6 @@ export default function Index() {
             }
           />
         )}
-        ListFooterComponent={<View style={{ height: 20 }} />}
       />
 
       <FilterModal
@@ -313,6 +309,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 25,
     paddingBottom: 20,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "red",
+    fontWeight: "600",
   },
   headerContainer: {
     marginBottom: 12,
@@ -376,25 +381,6 @@ const styles = StyleSheet.create({
   filterButtonText: {
     color: "#2C6EFA",
     fontWeight: "700",
-  },
-  orderRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 12,
-  },
-  orderButton: {
-    flex: 1,
-    backgroundColor: "#EEE",
-    padding: 12,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  orderActive: {
-    backgroundColor: "#2C6EFA",
-  },
-  orderText: {
-    fontWeight: "700",
-    color: "#333",
   },
   sectionContainer: {
     marginTop: 20,

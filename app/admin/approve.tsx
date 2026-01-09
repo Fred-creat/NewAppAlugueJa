@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -22,11 +23,27 @@ export default function AdminApprove() {
   } = useAds();
 
   const { isAdmin, loading } = useAuth();
+  const [processingId, setProcessingId] = useState<
+    string | null
+  >(null);
+
+  /* ================== LOAD (FOCUS SAFE) ================== */
+  useFocusEffect(
+    useCallback(() => {
+      if (isAdmin) {
+        loadPendingAds();
+      }
+    }, [isAdmin])
+  );
 
   /* ================== GUARD ================== */
 
   if (loading) {
-    return null;
+    return (
+      <View style={styles.center}>
+        <Text>Carregando...</Text>
+      </View>
+    );
   }
 
   if (!isAdmin) {
@@ -36,12 +53,6 @@ export default function AdminApprove() {
       </View>
     );
   }
-
-  /* ================== LOAD ================== */
-
-  useEffect(() => {
-    loadPendingAds();
-  }, []);
 
   /* ================== DERIVED LISTS ================== */
 
@@ -53,7 +64,7 @@ export default function AdminApprove() {
     (ad) => ad.status === "PAYMENT_PENDING"
   );
 
-  /* ================== AÇÕES ADMIN ================== */
+  /* ================== ACTIONS ================== */
 
   const handleApprove = (adId: string) => {
     Alert.alert(
@@ -63,7 +74,11 @@ export default function AdminApprove() {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Aprovar",
-          onPress: () => approveAd(adId),
+          onPress: async () => {
+            setProcessingId(adId);
+            await approveAd(adId);
+            setProcessingId(null);
+          },
         },
       ]
     );
@@ -77,11 +92,51 @@ export default function AdminApprove() {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Confirmar",
-          onPress: () => confirmPayment(adId),
+          onPress: async () => {
+            setProcessingId(adId);
+            await confirmPayment(adId);
+            setProcessingId(null);
+          },
         },
       ]
     );
   };
+
+  /* ================== RENDER LIST ================== */
+
+  function renderAd(
+    item: any,
+    action: () => void,
+    label: string,
+    color: string,
+    icon: any
+  ) {
+    const disabled = processingId === item.id;
+
+    return (
+      <View style={styles.card}>
+        <ItemCard
+          title={item.title}
+          price={item.price}
+          image={item.images?.[0]}
+        />
+
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            { backgroundColor: color, opacity: disabled ? 0.6 : 1 },
+          ]}
+          disabled={disabled}
+          onPress={action}
+        >
+          <Ionicons name={icon} size={18} color="#FFF" />
+          <Text style={styles.buttonText}>
+            {disabled ? "Processando..." : label}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   /* ================== RENDER ================== */
 
@@ -89,10 +144,14 @@ export default function AdminApprove() {
     <View style={styles.container}>
       <Text style={styles.title}>Painel Administrativo</Text>
 
-      {/* ================== PENDENTES ================== */}
+      {/* ===== APROVAÇÕES ===== */}
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="time-outline" size={20} color="#F39C12" />
+          <Ionicons
+            name="time-outline"
+            size={20}
+            color="#F39C12"
+          />
           <Text style={styles.sectionTitle}>
             Anúncios pendentes
           </Text>
@@ -106,37 +165,27 @@ export default function AdminApprove() {
           <FlatList
             data={approvalPendingAds}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <ItemCard
-                  title={item.title}
-                  price={item.price}
-                  image={item.images?.[0]}
-                />
-
-                <TouchableOpacity
-                  style={styles.approveButton}
-                  onPress={() => handleApprove(item.id)}
-                >
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={18}
-                    color="#FFF"
-                  />
-                  <Text style={styles.buttonText}>
-                    Aprovar anúncio
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            renderItem={({ item }) =>
+              renderAd(
+                item,
+                () => handleApprove(item.id),
+                "Aprovar anúncio",
+                "#2ECC71",
+                "checkmark-circle-outline"
+              )
+            }
           />
         )}
       </View>
 
-      {/* ================== PAGAMENTOS ================== */}
+      {/* ===== PAGAMENTOS ===== */}
       <View style={styles.sectionBox}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="card-outline" size={20} color="#8E44AD" />
+          <Ionicons
+            name="card-outline"
+            size={20}
+            color="#8E44AD"
+          />
           <Text style={styles.sectionTitle}>
             Pagamentos em análise
           </Text>
@@ -150,31 +199,15 @@ export default function AdminApprove() {
           <FlatList
             data={paymentPendingAds}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <ItemCard
-                  title={item.title}
-                  price={item.price}
-                  image={item.images?.[0]}
-                />
-
-                <TouchableOpacity
-                  style={styles.confirmButton}
-                  onPress={() =>
-                    handleConfirmPayment(item.id)
-                  }
-                >
-                  <Ionicons
-                    name="star-outline"
-                    size={18}
-                    color="#FFF"
-                  />
-                  <Text style={styles.buttonText}>
-                    Confirmar pagamento
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            renderItem={({ item }) =>
+              renderAd(
+                item,
+                () => handleConfirmPayment(item.id),
+                "Confirmar pagamento",
+                "#8E44AD",
+                "star-outline"
+              )
+            }
           />
         )}
       </View>
@@ -215,19 +248,9 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
   },
-  approveButton: {
+  actionButton: {
     flexDirection: "row",
     gap: 6,
-    backgroundColor: "#2ECC71",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmButton: {
-    flexDirection: "row",
-    gap: 6,
-    backgroundColor: "#8E44AD",
     padding: 14,
     borderRadius: 12,
     alignItems: "center",

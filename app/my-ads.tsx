@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -14,24 +14,25 @@ import { useAds } from "../contexts/AdsContext";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function MyAds() {
-  const { myAds, loadMyAds } = useAds();
-  const { user, loading } = useAuth();
+  const { myAds, loadMyAds, loading, error } = useAds();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  /* ================== EFFECT ================== */
-
-  useEffect(() => {
-    if (user?.id) {
-      loadMyAds();
-    }
-  }, [user?.id]);
+  /* ================== LOAD ADS (FOCUS SAFE) ================== */
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        loadMyAds();
+      }
+    }, [user?.id])
+  );
 
   /* ================== STATES ================== */
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.center}>
-        <Text>Carregando...</Text>
+        <Text>Carregando anúncios...</Text>
       </View>
     );
   }
@@ -44,14 +45,33 @@ export default function MyAds() {
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   if (myAds.length === 0) {
     return (
       <View style={styles.center}>
         <Ionicons name="home-outline" size={64} color="#999" />
-        <Text style={styles.emptyTitle}>Nenhum anúncio criado</Text>
+        <Text style={styles.emptyTitle}>
+          Nenhum anúncio criado
+        </Text>
         <Text style={styles.emptyText}>
           Crie seu primeiro anúncio e comece a receber contatos
         </Text>
+
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => router.push("/create-ad")}
+        >
+          <Text style={styles.createButtonText}>
+            Criar anúncio
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -62,7 +82,9 @@ export default function MyAds() {
     if (item.isFeatured) {
       return (
         <View style={[styles.badge, styles.featured]}>
-          <Text style={styles.badgeText}>⭐ Destaque ativo</Text>
+          <Text style={styles.badgeText}>
+            ⭐ Destaque ativo
+          </Text>
         </View>
       );
     }
@@ -70,7 +92,9 @@ export default function MyAds() {
     if (item.status === "PAYMENT_PENDING") {
       return (
         <View style={[styles.badge, styles.payment]}>
-          <Text style={styles.badgeText}>💳 Pagamento em análise</Text>
+          <Text style={styles.badgeText}>
+            💳 Pagamento em análise
+          </Text>
         </View>
       );
     }
@@ -78,7 +102,9 @@ export default function MyAds() {
     if (item.status === "PENDING") {
       return (
         <View style={[styles.badge, styles.pending]}>
-          <Text style={styles.badgeText}>⏳ Aguardando aprovação</Text>
+          <Text style={styles.badgeText}>
+            ⏳ Aguardando aprovação
+          </Text>
         </View>
       );
     }
@@ -103,6 +129,7 @@ export default function MyAds() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <ItemCard
+              id={item.id}
               title={item.title}
               price={item.price}
               location={item.location}
@@ -110,38 +137,41 @@ export default function MyAds() {
               beds={item.beds}
               baths={item.baths}
               isFeatured={item.isFeatured}
-              onPress={() => router.push(`/item/${item.id}`)}
+              onPress={() =>
+                router.push(`/item/${item.id}`)
+              }
             />
 
-            {/* STATUS */}
             <View style={styles.statusRow}>
               {renderStatus(item)}
             </View>
 
-            {/* CTA PROMOVER */}
-            {item.status === "APPROVED" && !item.isFeatured && (
-              <>
-                <TouchableOpacity
-                  style={styles.promoteButton}
-                  onPress={() =>
-                    router.push(`/promote-ad/${item.id}`)
-                  }
-                >
-                  <Ionicons
-                    name="star-outline"
-                    size={18}
-                    color="#2C6EFA"
-                  />
-                  <Text style={styles.promoteText}>
-                    Destacar anúncio
-                  </Text>
-                </TouchableOpacity>
+            {item.status === "APPROVED" &&
+              !item.isFeatured && (
+                <>
+                  <TouchableOpacity
+                    style={styles.promoteButton}
+                    onPress={() =>
+                      router.push(
+                        `/promote-ad/${item.id}`
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name="star-outline"
+                      size={18}
+                      color="#2C6EFA"
+                    />
+                    <Text style={styles.promoteText}>
+                      Destacar anúncio
+                    </Text>
+                  </TouchableOpacity>
 
-                <Text style={styles.helperText}>
-                  Destaque seu anúncio e apareça no topo da lista
-                </Text>
-              </>
-            )}
+                  <Text style={styles.helperText}>
+                    Destaque seu anúncio e apareça no topo
+                  </Text>
+                </>
+              )}
           </View>
         )}
       />
@@ -172,6 +202,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
+  errorText: {
+    color: "red",
+    fontWeight: "600",
+  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
@@ -182,6 +216,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
     textAlign: "center",
+  },
+  createButton: {
+    marginTop: 16,
+    backgroundColor: "#2C6EFA",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  createButtonText: {
+    color: "#FFF",
+    fontWeight: "700",
   },
 
   /* STATUS */
